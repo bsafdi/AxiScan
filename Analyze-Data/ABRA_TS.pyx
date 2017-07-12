@@ -21,9 +21,9 @@ cdef double c = 299792.458 # speed of light [km/s]
 @cython.cdivision(True)
 @cython.initializedcheck(False)
 cpdef TS_Scan(double[::1] PSD, double[::1] freqs, 
-			  double[::1] mass_TestSet, double[::1] A_TestSet, 
-			  double[::1] PSDback_TestSet, double v0_Halo, double vObs_Halo,
-			  double num_stacked, int min_Resolve):
+              double[::1] mass_TestSet, double[::1] A_TestSet, 
+              double[::1] PSDback_TestSet, double v0_Halo, double vObs_Halo,
+              double num_stacked, int min_Resolve):
     """ Calculate the Test Statistic for a given input dataset (PSDs and freqs)
         at a number of different mass and A value points
           - PSD: measured power spectral densities
@@ -79,8 +79,8 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs,
 
                     # Calculate the TS = 2*[LL(S+B) - LL(B)]
                     TS_Array[im, iA, iPSDb] += 2*(-PSD[ifrq]
-                                            *(1/LambdakA-1/Lambdak0) 
-				                            - log(LambdakA/Lambdak0)) \
+                                            * (1/LambdakA-1/Lambdak0) 
+                                            - log(LambdakA/Lambdak0)) \
                                             * num_stacked
     
     return np.array(TS_Array)
@@ -127,7 +127,7 @@ cdef double fSHM(double v, double v0, double vObs) nogil:
 @cython.cdivision(True)
 @cython.initializedcheck(False)
 cdef double Lambdak(double freq, double ma, double A, double PSDback,
-            double v0_Halo, double vObs_Halo) nogil:
+                    double v0_Halo, double vObs_Halo) nogil:
     """ Calculate the mean of the exponential distribution followed by the PSD
           - freq: frequencies to calculate Lambdak [Hz]
           - ma: ma/2pi is the frequency associated with the axion mass [Hz]
