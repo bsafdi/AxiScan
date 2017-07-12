@@ -71,6 +71,7 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
 
     # These are temporary values set to maximize our range of testable values
     # based on the range of allowable PSDback test values.
+    # What we actually return is the sqrt(A), which is closer to gagg
     exclusionA = solveForA(mass_TestSet, exclusion_TS, num_stacked, 
                            collectionTime, v0, vObs, PSDback_max)
 
@@ -126,17 +127,12 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
 
 
     # Now we compute the real error lines based on the scan for PSDback
-    exclusionA[:] = solveForA(mass_TestSet[:], exclusion_TS, num_stacked, 
-                           collectionTime, v0, vObs, PSDback_Scan_Set[:])
+    exclusionA = solveForA(mass_TestSet[:], exclusion_TS, num_stacked, 
+                           collectionTime, v0, vObs, PSDback_Scan_Set)
 
-    sigmaA[:] = getSigma_A(mass_TestSet[:], num_stacked, collectionTime, v0, vObs, 
-                        PSDback_Scan_Set[:])
+    sigmaA = getSigma_A(mass_TestSet, num_stacked, collectionTime, v0, vObs, 
+                        PSDback_Scan_Set)
 
-    #exclusionA = zScore(0)*sigmaA
-    #exclusionA_1SigUp = zScore(1) * sigmaA
-    #exclusionA_1SigLo = zScore(-1) * sigmaA
-    #exclusionA_2SigUp = zScore(2) * sigmaA
-    
     exclusionG = 1.3645322997 * np.sqrt(sigmaA)
     exclusionG_1SigUp = 1.61359288843 * np.sqrt(sigmaA)
     exclusionG_1SigLo = 1.14644076042 * np.sqrt(sigmaA)
@@ -145,11 +141,10 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
 
     # Determine the TS threshold for detection and the A associated 
     TS_Thresh = 2.*scipy.special.erfinv(1.-2.*(1.-detectionP)/num_Masses)**2.
-    detectionA[:] = solveForA(mass_TestSet[:], TS_Thresh, num_stacked, collectionTime, 
-                           v0, vObs, PSDback_Scan_Set[:])
+    detectionA = solveForA(mass_TestSet, TS_Thresh, num_stacked, collectionTime, 
+                           v0, vObs, PSDback_Scan_Set)
 
     detectionG = np.sqrt(detectionA)
-
 
     # Now at each mass find where TS drops below 2.71 from the max, this is the
     # 95% limit
@@ -164,8 +159,8 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     G_limits = np.sqrt(A_limits)
 
     return mass_TestSet, np.maximum(G_limits, exclusionG_1SigLo), exclusionG, \
-           exclusionG_1SigLo, exclusionG_1SigUp, exclusionG_2SigUp, exclusionG_2SigLo, \
-           detectionA
+           exclusionG_1SigLo, exclusionG_1SigUp, exclusionG_2SigUp, \
+           exclusionG_2SigLo, detectionG
 
 
 
