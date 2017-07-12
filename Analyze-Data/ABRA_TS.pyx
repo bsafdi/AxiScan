@@ -50,16 +50,15 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs,
     
     # Setup loop variables
     cdef double LambdakA, Lambdak0, fmin, fmax
-    cdef double df = freqs[1]-freqs[0]
     cdef int fminIndex, fmaxIndex
     cdef Py_ssize_t im, iA, iPSDb, ifrq
 
     # Loop through masses and A values and calculate the TS for each
     for im in range(N_masses):
         # Only look at a range of frequencies around the mass
-        fmin = mass_TestSet[im] / 2.0 / pi
-        fmax = fmin * (1+3*(v0_Halo+vObs_Halo)**2 / c**2)
-        fminIndex = np.searchsorted(freqs, fmin)+1
+        fmin = mass_TestSet[im] / 2. / pi
+        fmax = fmin * (1. + 3.*(v0_Halo+vObs_Halo)**2. / c**2.)
+        fminIndex = np.searchsorted(freqs, fmin) + 1
         fmaxIndex = int_min(np.searchsorted(freqs, fmax), N_freqs - 1)
 
         # Skip if below the minimum resolved relative frequency size
@@ -78,8 +77,8 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs,
                                        v0_Halo, vObs_Halo)
 
                     # Calculate the TS = 2*[LL(S+B) - LL(B)]
-                    TS_Array[im, iA, iPSDb] += 2*(-PSD[ifrq]
-                                            * (1/LambdakA-1/Lambdak0) 
+                    TS_Array[im, iA, iPSDb] += 2.*(-PSD[ifrq]
+                                            * (1./LambdakA - 1./Lambdak0) 
                                             - log(LambdakA/Lambdak0)) \
                                             * num_stacked
     
