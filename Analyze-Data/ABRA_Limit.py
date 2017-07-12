@@ -28,7 +28,7 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
           - PSDback_bins: number of bins to scan PSD background over
           - num_stacked: the number of subintervals over which the data is
             stacked
-          - min_Resolve: the minimum relative frequency to resolve
+          - min_Resolve: minimum number of frequency bins needed to resolve
           - v0: velocity dispersion (=sqrt(2) sigma_v), nominally 220 km/s
           - vObs: velocity of the Sun in the Milky Way frame, nominally 232 km/s
           - dataisFFT: by default data is PSD, if FFT set to true
@@ -117,8 +117,8 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     for i in range(N_testMass):
         TS_single_mass = TS_Array[i]
         maxIndex = np.where(TS_single_mass == 0)[0][0]
-		TS_single_mass[:maxIndex] = 0.0 # flatten to the left of maximum
-		A_limits[i] = A_TestSet[find_nearest(TS_single_mass, 
+        TS_single_mass[:maxIndex] = 0.0 # flatten to the left of maximum
+        A_limits[i] = A_TestSet[find_nearest(TS_single_mass, 
                                 -scipy.stats.chi2.ppf(exclusionP, 1))]
 
     return mass_TestSet, np.maximum(A_limits, exclusionA_OneSigmaLower), \

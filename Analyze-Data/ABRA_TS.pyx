@@ -38,7 +38,7 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs,
             232 km/s
           - num_stacked: the number of subintervals over which the data is 
             stacked each of length Delta T = total T / num_stacked
-          - min_Resolve: minimum relative frequency size to resolve 
+          - min_Resolve: minimum number of frequency bins needed to resolve 
     """
 
     # Setup the length of input and output arrays
