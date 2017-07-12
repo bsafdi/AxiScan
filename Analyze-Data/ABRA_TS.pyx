@@ -38,7 +38,7 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs,
             232 km/s
           - num_stacked: the number of subintervals over which the data is 
             stacked each of length Delta T = total T / num_stacked
-          - min_Resolve: minimum number of frequency bins needed to resolve 
+          - min_Resolve: minimum relative frequency size to resolve 
     """
 
     # Setup the length of input and output arrays
@@ -50,15 +50,16 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs,
     
     # Setup loop variables
     cdef double LambdakA, Lambdak0, fmin, fmax
+    cdef double df = freqs[1]-freqs[0]
     cdef int fminIndex, fmaxIndex
     cdef Py_ssize_t im, iA, iPSDb, ifrq
 
     # Loop through masses and A values and calculate the TS for each
     for im in range(N_masses):
         # Only look at a range of frequencies around the mass
-        fmin = mass_TestSet[im] / 2. / pi
-        fmax = fmin * (1. + 3.*(v0_Halo+vObs_Halo)**2. / c**2.)
-        fminIndex = np.searchsorted(freqs, fmin) + 1
+        fmin = mass_TestSet[im] / 2.0 / pi
+        fmax = fmin * (1+3*(v0_Halo+vObs_Halo)**2 / c**2)
+        fminIndex = np.searchsorted(freqs, fmin)+1
         fmaxIndex = int_min(np.searchsorted(freqs, fmax), N_freqs - 1)
 
         # Skip if below the minimum resolved relative frequency size
@@ -73,12 +74,12 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs,
                                        v0_Halo, vObs_Halo)
                     # Lambda_k associated with Background only
                     Lambdak0 = Lambdak(freqs[ifrq], mass_TestSet[im], 
-                                       0.0, PSDback_TestSet[iPSDb], 
+                                       0.0, PSDback_TestSet[0], 
                                        v0_Halo, vObs_Halo)
 
                     # Calculate the TS = 2*[LL(S+B) - LL(B)]
-                    TS_Array[im, iA, iPSDb] += 2.*(-PSD[ifrq]
-                                            * (1./LambdakA - 1./Lambdak0) 
+                    TS_Array[im, iA, iPSDb] += 2*(-PSD[ifrq]
+                                            * (1/LambdakA-1/Lambdak0) 
                                             - log(LambdakA/Lambdak0)) \
                                             * num_stacked
     
@@ -96,6 +97,7 @@ cdef extern from "math.h":
     double pow(double x, double y) nogil
     double sqrt(double x) nogil
     double erf(double x) nogil
+    double exp(double x) nogil
 
 cdef extern from "complex.h":
     double cabs(complex z) nogil # complex absolute value

@@ -28,7 +28,7 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
           - PSDback_bins: number of bins to scan PSD background over
           - num_stacked: the number of subintervals over which the data is
             stacked
-          - min_Resolve: minimum number of frequency bins needed to resolve
+          - min_Resolve: the minimum relative frequency to resolve
           - v0: velocity dispersion (=sqrt(2) sigma_v), nominally 220 km/s
           - vObs: velocity of the Sun in the Milky Way frame, nominally 232 km/s
           - dataisFFT: by default data is PSD, if FFT set to true
@@ -54,7 +54,7 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
                    * 2*np.pi
     num_Masses = c**2 / v0**2 * np.log(freqs[-1]/freqs[0])
 
-    # Determine the exclusion and detection thersholds
+    # Determine the exclusion and detection thresholds
     exclusionP = .9 # This is 95% because we have a one sided distribution
     detectionP = 1. - 2.*(1.-scipy.stats.norm.cdf(5.)) # 5 sigma
     exclusion_TS = scipy.stats.chi2.ppf(exclusionP, 1)
@@ -68,11 +68,14 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     # - rhoDM: local dark matter density, 0.3-0.4 GeV/cm^3
     # - L: SQUID inductance
     # - Lp: pickup loop inductance
+
+    # These are temporary values set to maximize our range of testable values
+    # based on the range of allowable PSDback test values.
     exclusionA = solveForA(mass_TestSet, exclusion_TS, num_stacked, 
-                           collectionTime, v0, vObs, PSDback)
+                           collectionTime, v0, vObs, PSDback_max)
 
     sigmaA = getSigma_A(mass_TestSet, num_stacked, collectionTime, v0, vObs, 
-                        PSDback)
+                        PSDback_min)
     exclusionA_1SigUp = zScore(1) * sigmaA
     exclusionA_1SigLo = zScore(-1) * sigmaA
     exclusionA_2SigUp = zScore(2) * sigmaA
@@ -80,7 +83,7 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     # Determine the TS threshold for detection and the A associated 
     TS_Thresh = 2.*scipy.special.erfinv(1.-2.*(1.-detectionP)/num_Masses)**2.
     detectionA = solveForA(mass_TestSet, TS_Thresh, num_stacked, collectionTime, 
-                           v0, vObs, PSDback)
+                           v0, vObs, PSDback_max)
 
     # We are using the CLs method, so we do not go below 1 sigma lower
     A_Min = np.amin(exclusionA_1SigLo)*0.01
@@ -102,6 +105,15 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     TS_Array_raw = ABRA_TS.TS_Scan(PSD, freqs, mass_TestSet, A_TestSet, 
                                    PSDback_TestSet, v0, vObs, num_stacked, 
                                    min_Resolve)
+
+
+    # We need to extract the scanned value of the PSD at each value of the mass
+    PSDback_Scan_Set = np.zeros((N_testMass))
+    # Marginalize over the A value to determine the scan value at each mass 
+    TS_Array_PSD = np.amax(TS_Array_raw, axis = 1) 
+    for i in range(N_testMass):
+        PSDback_Scan_Set[i]  = PSDback_TestSet[np.argmax(TS_Array_PSD[i])]
+
     
     # Profile over PSDback
     TS_Array_all = np.amax(TS_Array_raw, axis = 2)
@@ -111,18 +123,39 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     for i in range(N_testMass):
         TS_Array[i] = TS_Array_all[i] - np.amax(TS_Array_all[i])
 
+
+
+    # Now we compute the real error lines based on the scan for PSDback
+    exclusionA[:] = solveForA(mass_TestSet[:], exclusion_TS, num_stacked, 
+                           collectionTime, v0, vObs, PSDback_Scan_Set[:])
+
+    sigmaA[:] = getSigma_A(mass_TestSet[:], num_stacked, collectionTime, v0, vObs, 
+                        PSDback_Scan_Set[:])
+    exclusionA_1SigUp = zScore(1) * sigmaA
+    exclusionA_1SigLo = zScore(-1) * sigmaA
+    exclusionA_2SigUp = zScore(2) * sigmaA
+    
+    # Determine the TS threshold for detection and the A associated 
+    TS_Thresh = 2.*scipy.special.erfinv(1.-2.*(1.-detectionP)/num_Masses)**2.
+    detectionA[:] = solveForA(mass_TestSet[:], TS_Thresh, num_stacked, collectionTime, 
+                           v0, vObs, PSDback_Scan_Set[:])
+
+
+
+
     # Now at each mass find where TS drops below 2.71 from the max, this is the
     # 95% limit
     A_limits = np.zeros(N_testMass)
     for i in range(N_testMass):
         TS_single_mass = TS_Array[i]
         maxIndex = np.where(TS_single_mass == 0)[0][0]
-        TS_single_mass[:maxIndex] = 0.0 # flatten to the left of maximum
-        A_limits[i] = A_TestSet[find_nearest(TS_single_mass, 
+	TS_single_mass[:maxIndex] = 0.0 # flatten to the left of maximum
+	A_limits[i] = A_TestSet[find_nearest(TS_single_mass, 
                                 -scipy.stats.chi2.ppf(exclusionP, 1))]
 
-    return mass_TestSet, np.maximum(A_limits, exclusionA_OneSigmaLower), \
-           exclusionA_TwoSigmaUpper, detectionA
+    return mass_TestSet, np.maximum(A_limits, exclusionA_1SigLo), exclusionA, \
+          exclusionA_1SigLo, exclusionA_1SigUp, exclusionA_2SigUp, detectionA
+
 
 
 ########################
