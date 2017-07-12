@@ -114,7 +114,6 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     TS_Array_PSD = np.amax(TS_Array_raw, axis = 1) 
     for i in range(N_testMass):
         PSDback_Scan_Set[i]  = PSDback_TestSet[np.argmax(TS_Array_PSD[i])]
-
     
     # Profile over PSDback
     TS_Array_all = np.amax(TS_Array_raw, axis = 2)
@@ -123,8 +122,6 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     TS_Array = np.zeros(TS_Array_all.shape)
     for i in range(N_testMass):
         TS_Array[i] = TS_Array_all[i] - np.amax(TS_Array_all[i])
-
-
 
     # Now we compute the real error lines based on the scan for PSDback
     exclusionA = solveForA(mass_TestSet[:], exclusion_TS, num_stacked, 
@@ -152,8 +149,8 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     for i in range(N_testMass):
         TS_single_mass = TS_Array[i]
         maxIndex = np.where(TS_single_mass == 0)[0][0]
-	TS_single_mass[:maxIndex] = 0.0 # flatten to the left of maximum
-	A_limits[i] = A_TestSet[find_nearest(TS_single_mass, 
+        TS_single_mass[:maxIndex] = 0.0 # flatten to the left of maximum
+        A_limits[i] = A_TestSet[find_nearest(TS_single_mass, 
                                 -scipy.stats.chi2.ppf(exclusionP, 1))]
 
     G_limits = np.sqrt(A_limits)
