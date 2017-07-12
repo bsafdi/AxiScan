@@ -131,16 +131,24 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
 
     sigmaA[:] = getSigma_A(mass_TestSet[:], num_stacked, collectionTime, v0, vObs, 
                         PSDback_Scan_Set[:])
-    exclusionA_1SigUp = zScore(1) * sigmaA
-    exclusionA_1SigLo = zScore(-1) * sigmaA
-    exclusionA_2SigUp = zScore(2) * sigmaA
+
+    #exclusionA = zScore(0)*sigmaA
+    #exclusionA_1SigUp = zScore(1) * sigmaA
+    #exclusionA_1SigLo = zScore(-1) * sigmaA
+    #exclusionA_2SigUp = zScore(2) * sigmaA
     
+    exclusionG = 1.3645322997 * np.sqrt(sigmaA)
+    exclusionG_1SigUp = 1.61359288843 * np.sqrt(sigmaA)
+    exclusionG_1SigLo = 1.14644076042 * np.sqrt(sigmaA)
+    exclusionG_2SigUp = 1.86642501392 * np.sqrt(sigmaA)
+    exclusionG_2SigLo = .974408677484 * np.sqrt(sigmaA)
+
     # Determine the TS threshold for detection and the A associated 
     TS_Thresh = 2.*scipy.special.erfinv(1.-2.*(1.-detectionP)/num_Masses)**2.
     detectionA[:] = solveForA(mass_TestSet[:], TS_Thresh, num_stacked, collectionTime, 
                            v0, vObs, PSDback_Scan_Set[:])
 
-
+    detectionG = np.sqrt(detectionA)
 
 
     # Now at each mass find where TS drops below 2.71 from the max, this is the
@@ -153,8 +161,11 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
 	A_limits[i] = A_TestSet[find_nearest(TS_single_mass, 
                                 -scipy.stats.chi2.ppf(exclusionP, 1))]
 
-    return mass_TestSet, np.maximum(A_limits, exclusionA_1SigLo), exclusionA, \
-          exclusionA_1SigLo, exclusionA_1SigUp, exclusionA_2SigUp, detectionA
+    G_limits = np.sqrt(A_limits)
+
+    return mass_TestSet, np.maximum(G_limits, exclusionG_1SigLo), exclusionG, \
+           exclusionG_1SigLo, exclusionG_1SigUp, exclusionG_2SigUp, exclusionG_2SigLo, \
+           detectionA
 
 
 
