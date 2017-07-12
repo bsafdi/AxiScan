@@ -23,7 +23,7 @@ cdef double c = 299792.458 # speed of light [km/s]
 @cython.cdivision(True)
 @cython.initializedcheck(False)
 cpdef PSD_gen(double[::1] freqs, double ma, double A, double PSDback, double v0, 
-              double vObs, double num_stacked, int seed):
+              double vObs, int num_stacked, int seed):
     """ Generate ABRACADABRA Monte Carlo in the form PSDs, as a function of the
         following parameters:
           - freqs: array of frequencies to calculate the PSD at [Hz]
@@ -45,6 +45,7 @@ cpdef PSD_gen(double[::1] freqs, double ma, double A, double PSDback, double v0,
     cdef double[::1] PSD = np.zeros(N_freqs)
     cdef Py_ssize_t i
     cdef double exp_mean, v, vSq
+    cdef float num_stackedf = float(num_stacked)
 
     with nogil:
         for i in range(N_freqs):
@@ -56,7 +57,7 @@ cpdef PSD_gen(double[::1] freqs, double ma, double A, double PSDback, double v0,
                 # Evaluate SHM using velocities in natural units
                 exp_mean += A * pi * fSHM(v, v0/c, vObs/c) / ma / v
 
-            PSD[i] = next_gamma_rand(num_stacked, exp_mean/num_stacked)
+            PSD[i] = next_gamma_rand(num_stackedf, exp_mean/num_stackedf)
 	
     return np.array(PSD)
 
