@@ -69,14 +69,18 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     # - L: SQUID inductance
     # - Lp: pickup loop inductance
 
-    # These are temporary values set to maximize our range of testable values
-    # based on the range of allowable PSDback test values.
-    # What we actually return is the sqrt(A), which is closer to gagg
-    exclusionA = solveForA(mass_TestSet, exclusion_TS, num_stacked, 
-                           collectionTime, v0, vObs, PSDback_max)
+
+    # First we need to compute the PSDback at each test mass signal window
+    PSDback_TestSet = np.linspace(PSDback_min, PSDback_max, PSDback_bins)
+    scanned_PSDback = ABRA_TS.PSD_Scan(PSD, freqs, mass_TestSet, PSDback_TestSet,
+                                       v0, vObs, num_stacked)
+
+    # Now that we have the PSDback at each test mass signal window, we can compute
+    # the detection and exclusion lines. These are for A ~ gagg**2
 
     sigmaA = getSigma_A(mass_TestSet, num_stacked, collectionTime, v0, vObs, 
-                        PSDback_min)
+                        scanned_PSDback)
+    exclusionA = zScore(0)*sigmaA
     exclusionA_1SigUp = zScore(1) * sigmaA
     exclusionA_1SigLo = zScore(-1) * sigmaA
     exclusionA_2SigUp = zScore(2) * sigmaA
@@ -84,7 +88,8 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     # Determine the TS threshold for detection and the A associated 
     TS_Thresh = 2.*scipy.special.erfinv(1.-2.*(1.-detectionP)/num_Masses)**2.
     detectionA = solveForA(mass_TestSet, TS_Thresh, num_stacked, collectionTime, 
-                           v0, vObs, PSDback_max)
+                           v0, vObs, scanned_PSDback)
+
 
     # We are using the CLs method, so we do not go below 1 sigma lower
     A_Min = np.amin(exclusionA_1SigLo)*0.01
@@ -95,53 +100,19 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     A_TestSet = np.sort(np.append(10**np.linspace(np.log10(A_Min), 
                         np.log10(A_Max), 100), 0.0))
 
-    # Setup PSD background scan range
-    PSDback_TestSet = np.linspace(PSDback_min, PSDback_max, PSDback_bins)
-
     ##################################
     # Perform Scan, Calculate Limits #
     ##################################
     
     # Now calculate the TS array
     TS_Array_raw = ABRA_TS.TS_Scan(PSD, freqs, mass_TestSet, A_TestSet, 
-                                   PSDback_TestSet, v0, vObs, num_stacked, 
+                                   scanned_PSDback, v0, vObs, num_stacked, 
                                    min_Resolve)
 
-
-    # We need to extract the scanned value of the PSD at each value of the mass
-    PSDback_Scan_Set = np.zeros((N_testMass))
-    # Marginalize over the A value to determine the scan value at each mass 
-    TS_Array_PSD = np.amax(TS_Array_raw, axis = 1) 
-    for i in range(N_testMass):
-        PSDback_Scan_Set[i]  = PSDback_TestSet[np.argmax(TS_Array_PSD[i])]
-    
-    # Profile over PSDback
-    TS_Array_all = np.amax(TS_Array_raw, axis = 2)
-    
     # At each mass value subtract off the maximum TS, so the maximum value is 0
-    TS_Array = np.zeros(TS_Array_all.shape)
+    TS_Array = np.zeros(TS_Array_raw.shape)
     for i in range(N_testMass):
-        TS_Array[i] = TS_Array_all[i] - np.amax(TS_Array_all[i])
-
-    # Now we compute the real error lines based on the scan for PSDback
-    exclusionA = solveForA(mass_TestSet[:], exclusion_TS, num_stacked, 
-                           collectionTime, v0, vObs, PSDback_Scan_Set)
-
-    sigmaA = getSigma_A(mass_TestSet, num_stacked, collectionTime, v0, vObs, 
-                        PSDback_Scan_Set)
-
-    exclusionG = 1.3645322997 * np.sqrt(sigmaA)
-    exclusionG_1SigUp = 1.61359288843 * np.sqrt(sigmaA)
-    exclusionG_1SigLo = 1.14644076042 * np.sqrt(sigmaA)
-    exclusionG_2SigUp = 1.86642501392 * np.sqrt(sigmaA)
-    exclusionG_2SigLo = .974408677484 * np.sqrt(sigmaA)
-
-    # Determine the TS threshold for detection and the A associated 
-    TS_Thresh = 2.*scipy.special.erfinv(1.-2.*(1.-detectionP)/num_Masses)**2.
-    detectionA = solveForA(mass_TestSet, TS_Thresh, num_stacked, collectionTime, 
-                           v0, vObs, PSDback_Scan_Set)
-
-    detectionG = np.sqrt(detectionA)
+        TS_Array[i] = TS_Array_raw[i] - np.amax(TS_Array_raw[i])
 
     # Now at each mass find where TS drops below 2.71 from the max, this is the
     # 95% limit
@@ -154,6 +125,14 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
                                 -scipy.stats.chi2.ppf(exclusionP, 1))]
 
     G_limits = np.sqrt(A_limits)
+
+    # Now we compute the real sensitivity curves
+    exclusionG = 1.3645322997 * np.sqrt(sigmaA)
+    exclusionG_1SigUp = 1.61359288843 * np.sqrt(sigmaA)
+    exclusionG_1SigLo = 1.14644076042 * np.sqrt(sigmaA)
+    exclusionG_2SigUp = 1.86642501392 * np.sqrt(sigmaA)
+    exclusionG_2SigLo = .974408677484 * np.sqrt(sigmaA)
+    detectionG = np.sqrt(detectionA)
 
     return mass_TestSet, np.maximum(G_limits, exclusionG_1SigLo), exclusionG, \
            exclusionG_1SigLo, exclusionG_1SigUp, exclusionG_2SigUp, \
