@@ -17,11 +17,11 @@ import ABRA_TS # Module to compute the TS
 c = 299792.458 # speed of light [km/s]
 
 
-def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins, 
-                       num_stacked=1, min_Resolve=150., v0=220., vObs=232., 
-                       dataisFFT=False):
+def axion_limit_params(PSD, freqs, PSDback_min, PSDback_max, PSDback_bins, 
+                       num_stacked=1, min_Resolve=150., v0=220., vObs=232.):
     """ Calculate what is required to make an axion limit plot
-          - data: measurements in the form of PSD or FFT
+          - PSD: measurements in the form of PSD
+            NB: In the stacked case the data should be the average PSD
           - freqs: frequencies data is measured at
           - PSDback_min: minimum PSD background to sample over
           - PSDback_max: maximum PSD background to sample over
@@ -31,7 +31,6 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
           - min_Resolve: the minimum relative frequency to resolve
           - v0: velocity dispersion (=sqrt(2) sigma_v), nominally 220 km/s
           - vObs: velocity of the Sun in the Milky Way frame, nominally 232 km/s
-          - dataisFFT: by default data is PSD, if FFT set to true
     """
     
     #############################
@@ -40,12 +39,6 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     
     # Infer the collection time from the frequencies
     collectionTime = 1.0/(freqs[1]-freqs[0])
-
-    # If data is FFT, convert to PSD
-    if dataisFFT:
-        PSD = ABRA_TS.FFTtoPSD(data, collectionTime)
-    else:
-        PSD = data
 
     # Setup array of masses to scan over given the frequencies
     N_testMass = int(np.log(freqs[-1] / freqs[0])

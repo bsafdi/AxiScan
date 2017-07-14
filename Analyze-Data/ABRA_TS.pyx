@@ -40,9 +40,9 @@ cpdef PSD_Scan(double[::1] PSD, double[::1] freqs, double[::1] PSDback_TestSet,
             LambdaK = Lambdak(freqs[ifrq], 1.0,
                               0.0, PSDback_TestSet[iPSDb],
                               v0_Halo, vObs_Halo)
-            LL_iPSDb += log(gamma_PDF(PSD[ifrq], num_stacked, 
-                            LambdaK / num_stacked))
-        
+            # Calculate LL appropriate for stacked data
+            LL_iPSDb += (-PSD[ifrq]/LambdaK - log(LambdaK)) * num_stacked
+            
         # If bigger it's the max, otherwise keep looking
         if iPSDb == 0:
             maxLL = LL_iPSDb
@@ -92,9 +92,10 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs, double[::1] mass_TestSet,
                     Lambdak0 = Lambdak(freqs[ifrq], mass_TestSet[im],
                                        0.0, PSDback, v0, vObs)
 
-                    TS_Array[im, iA] += 2*log( gamma_PDF(PSD[ifrq], num_stacked, LambdakA / num_stacked))
-                    TS_Array[im, iA] -= 2*log( gamma_PDF(PSD[ifrq], num_stacked, Lambdak0 / num_stacked))
-
+                    # Calculate the TS appropriate for stacked data 
+                    TS_Array[im, iA] += 2*(-PSD[ifrq] * (1/LambdakA-1/Lambdak0) 
+                                        - log(LambdakA/Lambdak0)) * num_stacked 
+                    
     return TS_Array
 
 
@@ -151,9 +152,10 @@ cpdef TS_Scan_BackTemplate(double[::1] PSD, double[::1] freqs, double[::1] mass_
                     Lambdak0 = Lambdak(freqs[ifrq], mass_TestSet[im],
                                        0.0, PSDback[ifrq], v0, vObs)
 
-                    TS_Array[im, iA] += 2*log( gamma_PDF(PSD[ifrq], num_stacked, LambdakA / num_stacked))
-                    TS_Array[im, iA] -= 2*log( gamma_PDF(PSD[ifrq], num_stacked, Lambdak0 / num_stacked))
-
+                    # Calculate the TS appropriate for the stacked case
+                    TS_Array[im, iA] += 2*(-PSD[ifrq] * (1/LambdakA-1/Lambdak0)
+                                        - log(LambdakA/Lambdak0)) * num_stacked
+                    
             PSD_Min[im] = PSDback[PSDminLoc]
             PSD_Max[im] = PSDback[PSDmaxLoc]
 
@@ -169,15 +171,6 @@ cdef extern from "math.h":
     double exp(double x) nogil
     double pow(double x, double y) nogil
     double sqrt(double x) nogil
-
-cdef extern from "complex.h":
-    double cabs(complex z) nogil # complex absolute value
-
-cdef extern from "gsl/gsl_randist.h":
-    double gsl_ran_gamma_pdf(double x, double a, double b) nogil
-
-cpdef inline double gamma_PDF(double x, double a, double b) nogil:
-    return gsl_ran_gamma_pdf(x, a, b)
 
 cdef inline int int_min(int a, int b) nogil: return a if a<= b else b
 
@@ -219,25 +212,3 @@ cdef double Lambdak(double freq, double ma, double A, double PSDback,
 
     cdef double v = sqrt(2.*(2.*pi*freq-ma)/ ma)
     return A * pi * fSHM(v, v0_Halo/c, vObs_Halo/c) / ma / v + PSDback
-
-
-@cython.boundscheck(False)
-@cython.wraparound(False)
-@cython.cdivision(True)
-@cython.initializedcheck(False)
-cpdef FFTtoPSD(complex[::1] FFT, double collectionTime):
-    """ Convert an array of FFTs into PSDs
-    """
-
-    cdef int N = len(FFT)
-    cdef float Nf = float(len(FFT))
-    cdef double A = collectionTime / pow(Nf, 2.) # = dt^2/T
-    cdef Py_ssize_t iN
-
-    cdef double[::1] PSD = np.zeros(N)
-
-    with nogil:
-        for iN in range(N):
-            PSD[iN] = pow(cabs(FFT[iN]), 2.0) * A 
-    
-    return np.array(PSD)
