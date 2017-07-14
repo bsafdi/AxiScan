@@ -69,11 +69,10 @@ def axion_limit_params(data, freqs, PSDback_min, PSDback_max, PSDback_bins,
     # - L: SQUID inductance
     # - Lp: pickup loop inductance
 
-
     # First we need to compute the PSDback at each test mass signal window
     PSDback_TestSet = np.linspace(PSDback_min, PSDback_max, PSDback_bins)
-    scanned_PSDback = ABRA_TS.PSD_Scan(PSD, freqs, mass_TestSet, PSDback_TestSet,
-                                       v0, vObs, num_stacked)
+    scanned_PSDback = ABRA_TS.PSD_Scan(PSD, freqs, PSDback_TestSet, v0, vObs, 
+                                       num_stacked)
 
     # Now that we have the PSDback at each test mass signal window, we can compute
     # the detection and exclusion lines. These are for A ~ gagg**2
