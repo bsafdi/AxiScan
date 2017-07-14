@@ -109,6 +109,68 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs, double[::1] mass_TestSet,
 
     return TS_Array
 
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.initializedcheck(False)
+cpdef TS_Scan_BackTemplate(double[::1] PSD, double[::1] freqs, double[::1] mass_TestSet,
+              double[::1] A_TestSet, double[::1] PSDback,
+              double v0, double vObs, double num_stacked, int min_Resolve):
+
+    # Setup the length of input and output arrays
+    cdef int N_freqs = len(freqs)
+    cdef int N_masses = len(mass_TestSet)
+    cdef int N_A = len(A_TestSet)
+    cdef int PSDminLoc, PSDmaxLoc
+    cdef double[:, ::1] TS_Array = np.zeros((N_masses, N_A))
+    cdef double[:, ::1] PSD_Min = np.zeros((N_masses))
+    cdef double[:, ::1] PSD_Max = np.zeros((N_masses))
+
+    # Setup loop variables
+    cdef double LambdakA, Lambdak0, fmin, fmax
+    cdef double df = freqs[1] - freqs[0]
+    cdef int fminIndex, fmaxIndex
+    cdef Py_ssize_t im, iA, ifrq
+
+    # Loop through masses and A values and calculate the TS for each
+    for im in range(N_masses):
+        # Only look at a range of frequencies around the mass
+            fmin = mass_TestSet[im] / 2.0 / pi
+            fmax = fmin*(1+3*(v0 + vObs)**2 / c**2)
+            fminIndex = np.searchsorted(freqs, fmin)+1
+            fmaxIndex = int_min(np.searchsorted(freqs, fmax), N_freqs - 1)
+
+
+            PSDminLoc = fminIndex
+            PSDmaxLoc = fmaxIndex
+
+            # Skip if below the minimum resolved relative frequency size
+            for ifrq in range(fminIndex, fmaxIndex):
+
+                if PSD[ifrq] > PSD[fmaxIndex]:
+                    PSDmaxLoc = ifrq
+
+                if PSD[ifrq] < PSD[fminIndex]:
+                    PSDminLoc = ifrq
+
+
+                for iA in range(N_A):
+                    # Lambda_k associated with Signal + Background
+                    LambdakA = Lambdak(freqs[ifrq], mass_TestSet[im],
+                                       A_TestSet[iA], PSDback[ifrq], v0, vObs)
+                    # Lambda_k associated with Background only
+                    Lambdak0 = Lambdak(freqs[ifrq], mass_TestSet[im],
+                                       0.0, PSDback[ifrq], v0, vObs)
+
+                    TS_Array[im, iA] += 2*log( gamma_PDF(PSD[ifrq], num_stacked, LambdakA / num_stacked))
+                    TS_Array[im, iA] -= 2*log( gamma_PDF(PSD[ifrq], num_stacked, Lambdak0 / num_stacked))
+
+            PSD_Min[im] = PSDback[PSDminLoc]
+            PSD_Max[im] = PSDback[PSDmaxLoc]
+
+    return TS_Array, PSD_Min, PSD_Max
+
 ########################
 # Additional Functions #
 ########################
