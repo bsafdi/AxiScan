@@ -21,9 +21,9 @@ cdef double c = 299792.458 # speed of light [km/s]
 @cython.cdivision(True)
 @cython.initializedcheck(False)
 cpdef PSD_Scan(double[::1] PSD, double[::1] freqs, 
-              double[::1] mass_TestSet, double[::1] PSDback_TestSet,
-              double v0_Halo, double vObs_Halo,
-              double num_stacked):
+               double[::1] mass_TestSet, double[::1] PSDback_TestSet,
+               double v0_Halo, double vObs_Halo,
+               double num_stacked):
 
     # Setup the length of input and output arrays
     cdef int N_freqs = len(freqs)
