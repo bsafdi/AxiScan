@@ -20,39 +20,23 @@ cdef double c = 299792.458 # speed of light [km/s]
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.initializedcheck(False)
-cpdef TS_Scan(double[::1] PSD, double[::1] freqs, 
-              double[::1] mass_TestSet, double[::1] A_TestSet, 
-              double[::1] PSDback_TestSet, double v0_Halo, double vObs_Halo,
-              double num_stacked, int min_Resolve):
-    """ Calculate the Test Statistic for a given input dataset (PSDs and freqs)
-        at a number of different mass and A value points
-          - PSD: measured power spectral densities
-          - freqs: frequencies associated with those PSDs [Hz]
-          - mass_TestSet: array of axion mass values; ma/2pi is the frequency 
-            associated with the axion mass [Hz]
-          - A_TestSet: array of A values; strength of axion PSD
-            A = (gagg * Bmax * VB * alpha)^2 * rhoDM * (L/Lp) / 4
-          - PSDback_TestSet: array of mean expected background PSDs to scan over
-          - v0_Halo: velocity dispersion (=sqrt(2) sigma_v), nominally 220 km/s
-          - vObs_Halo: velocity of the Sun in the Milky Way frame, nominally
-            232 km/s
-          - num_stacked: the number of subintervals over which the data is 
-            stacked each of length Delta T = total T / num_stacked
-          - min_Resolve: minimum relative frequency size to resolve 
-    """
+cpdef PSD_Scan(double[::1] PSD, double[::1] freqs, 
+              double[::1] mass_TestSet, double[::1] PSDback_TestSet,
+              double v0_Halo, double vObs_Halo,
+              double num_stacked):
 
     # Setup the length of input and output arrays
     cdef int N_freqs = len(freqs)
     cdef int N_masses = len(mass_TestSet)
-    cdef int N_A = len(A_TestSet)
     cdef int N_PSDb = len(PSDback_TestSet)
-    cdef double[:, :, ::1] TS_Array = np.zeros((N_masses, N_A, N_PSDb))
+    cdef double[:, ::1] LL_Array = np.zeros((N_masses, N_PSDb))
+    cdef double[::1] PSD_ScanResults = np.zeros((N_masses))
     
     # Setup loop variables
-    cdef double LambdakA, Lambdak0, fmin, fmax
+    cdef double LambdaK, fmin, fmax
     cdef double df = freqs[1]-freqs[0]
-    cdef int fminIndex, fmaxIndex
-    cdef Py_ssize_t im, iA, iPSDb, ifrq
+    cdef int fminIndex, fmaxIndex, maxLoc
+    cdef Py_ssize_t im, iPSDb, ifrq
 
     # Loop through masses and A values and calculate the TS for each
     for im in range(N_masses):
@@ -62,29 +46,68 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs,
         fminIndex = np.searchsorted(freqs, fmin)+1
         fmaxIndex = int_min(np.searchsorted(freqs, fmax), N_freqs - 1)
 
-        # Skip if below the minimum resolved relative frequency size
-        if (fmaxIndex - fminIndex) < min_Resolve: continue
+        for iPSDb in range(N_PSDb):
+            for ifrq in range(fminIndex, fmaxIndex):
+                # Lambda_K associated with Background only
+                LambdaK = Lambdak(freqs[ifrq], mass_TestSet[im], 
+                                   0.0, PSDback_TestSet[0], 
+                                   v0_Halo, vObs_Halo)
 
-        for iA in range(N_A):
-            for iPSDb in range(N_PSDb):
+                LL_Array[im, iPSDb] += log(gamma_PDF(PSD[ifrq], num_stacked, LambdaK / num_stacked))
+
+    for im in range(N_masses):
+        maxLoc = 0
+        for iPSDb in range(N_PSDb):
+            if LL_Array[im, iPSDb] > LL_Array[im, maxLoc]:
+                maxLoc = iPSDb
+        PSD_ScanResults[im] = PSDback_TestSet[maxLoc]
+
+    return np.array(PSD_ScanResults)
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.initializedcheck(False)
+cpdef TS_Scan(double[::1] PSD, double[::1] freqs, double[::1] mass_TestSet,
+              double[::1] A_TestSet, double[::1] PSDback,
+              double v0, double vObs, double num_stacked, int min_Resolve):
+
+    # Setup the length of input and output arrays
+    cdef int N_freqs = len(freqs)
+    cdef int N_masses = len(mass_TestSet)
+    cdef int N_A = len(A_TestSet)
+    cdef double[:, ::1] TS_Array = np.zeros((N_masses, N_A))
+
+    # Setup loop variables
+    cdef double LambdakA, Lambdak0, fmin, fmax
+    cdef double df = freqs[1] - freqs[0]
+    cdef int fminIndex, fmaxIndex
+    cdef Py_ssize_t im, iA, ifrq
+
+    # Loop through masses and A values and calculate the TS for each
+    for im in range(N_masses):
+        # Only look at a range of frequencies around the mass
+            fmin = mass_TestSet[im] / 2.0 / pi
+            fmax = fmin*(1+3*(v0 + vObs)**2 / c**2)
+            fminIndex = np.searchsorted(freqs, fmin)+1
+            fmaxIndex = int_min(np.searchsorted(freqs, fmax), N_freqs - 1)
+
+
+            # Skip if below the minimum resolved relative frequency size
+            for iA in range(N_A):
                 for ifrq in range(fminIndex, fmaxIndex):
                     # Lambda_k associated with Signal + Background
-                    LambdakA = Lambdak(freqs[ifrq], mass_TestSet[im], 
-                                       A_TestSet[iA], PSDback_TestSet[iPSDb],
-                                       v0_Halo, vObs_Halo)
+                    LambdakA = Lambdak(freqs[ifrq], mass_TestSet[im],
+                                       A_TestSet[iA], PSDback[im], v0, vObs)
                     # Lambda_k associated with Background only
-                    Lambdak0 = Lambdak(freqs[ifrq], mass_TestSet[im], 
-                                       0.0, PSDback_TestSet[0], 
-                                       v0_Halo, vObs_Halo)
+                    Lambdak0 = Lambdak(freqs[ifrq], mass_TestSet[im],
+                                       0.0, PSDback[im], v0, vObs)
 
-                    # Calculate the TS = 2*[LL(S+B) - LL(B)]
-                    TS_Array[im, iA, iPSDb] += 2*(-PSD[ifrq]
-                                            * (1/LambdakA-1/Lambdak0) 
-                                            - log(LambdakA/Lambdak0)) \
-                                            * num_stacked
-    
-    return np.array(TS_Array)
+                    TS_Array[im, iA] += 2*log( gamma_PDF(PSD[ifrq], num_stacked, LambdakA / num_stacked))
+                    TS_Array[im, iA] -= 2*log( gamma_PDF(PSD[ifrq], num_stacked, Lambdak0 / num_stacked))
 
+
+    return TS_Array
 
 ########################
 # Additional Functions #
@@ -101,6 +124,12 @@ cdef extern from "math.h":
 
 cdef extern from "complex.h":
     double cabs(complex z) nogil # complex absolute value
+
+cdef extern from "gsl/gsl_randist.h":
+    double gsl_ran_gamma_pdf(double x, double a, double b) nogil
+
+cpdef inline double gamma_PDF(double x, double a, double b) nogil:
+    return gsl_ran_gamma_pdf(x, a, b)
 
 cdef inline int int_min(int a, int b) nogil: return a if a<= b else b
 
