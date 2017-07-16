@@ -69,13 +69,24 @@ def axion_limit_params(PSD, freqs, PSDback_min, PSDback_max, PSDback_bins,
     scanned_PSDback = ABRA_TS.PSD_Scan(PSD, freqs, PSDback_TestSet, PSDback_temp, 
                                        v0, vObs, num_stacked)
 
+    
+    print "Best fit PSDback:",scanned_PSDback
     PSDback_temp *= scanned_PSDback
+
+    # Find maximum PSDback in each mass window
+    PSDmax_Array = np.zeros(len(mass_TestSet))
+    for im in range(len(mass_TestSet)):
+        fmin = mass_TestSet[im] / 2.0 / np.pi
+        fmax = fmin*(1+3*(v0 + vObs)**2 / c**2)
+        fminIndex = np.searchsorted(freqs, fmin)+1
+        fmaxIndex = np.min(np.array([np.searchsorted(freqs, fmax), len(freqs) - 1]))
+        PSDmax_Array[im] = np.max(PSDback_temp[fminIndex:fmaxIndex])
 
     # Now that we have the PSDback at each test mass signal window, we can compute
     # the detection and exclusion lines. These are for A ~ gagg**2
 
     sigmaA = getSigma_A(mass_TestSet, num_stacked, collectionTime, v0, vObs, 
-                        np.max(PSDback_temp))
+                        PSDmax_Array)
     exclusionA = zScore(0)*sigmaA
     exclusionA_1SigUp = zScore(1) * sigmaA
     exclusionA_1SigLo = zScore(-1) * sigmaA
@@ -84,8 +95,7 @@ def axion_limit_params(PSD, freqs, PSDback_min, PSDback_max, PSDback_bins,
     # Determine the TS threshold for detection and the A associated 
     TS_Thresh = 2.*scipy.special.erfinv(1.-2.*(1.-detectionP)/num_Masses)**2.
     detectionA = solveForA(mass_TestSet, TS_Thresh, num_stacked, collectionTime, 
-                           v0, vObs, np.max(PSDback_temp))
-
+                           v0, vObs, PSDmax_Array)
 
     # We are using the CLs method, so we do not go below 1 sigma lower
     A_Min = np.amin(exclusionA_1SigLo)*0.01
