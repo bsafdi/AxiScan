@@ -1,5 +1,5 @@
 ###############################################################################
-# ABRA_Limit.py
+# ABRA_Limit_BackTemplate.py
 ###############################################################################
 #
 # Convert input ABRACADABRA data into an axion parameter limit plot
@@ -11,14 +11,15 @@
 import numpy as np
 import scipy
 import scipy.stats
-import ABRA_TS # Module to compute the TS
+import ABRA_TS_BackTemplate as ABRA_TS # Module to compute the TS
 
 # Useful constants
 c = 299792.458 # speed of light [km/s]
 
 
-def axion_limit_params(PSD, freqs, PSDback_min, PSDback_max, PSDback_bins, 
-                       num_stacked=1, min_Resolve=150., v0=220., vObs=232.):
+def axion_limit_params(PSD, freqs, PSDback_min, PSDback_max, PSDback_bins,
+                       PSDback_temp, num_stacked=1, min_Resolve=150., v0=220., 
+                       vObs=232.):
     """ Calculate what is required to make an axion limit plot
           - PSD: measurements in the form of PSD
             NB: In the stacked case the data should be the average PSD
@@ -26,6 +27,7 @@ def axion_limit_params(PSD, freqs, PSDback_min, PSDback_max, PSDback_bins,
           - PSDback_min: minimum PSD background to sample over
           - PSDback_max: maximum PSD background to sample over
           - PSDback_bins: number of bins to scan PSD background over
+          - PSDback_temp: background PSD template
           - num_stacked: the number of subintervals over which the data is
             stacked
           - min_Resolve: the minimum relative frequency to resolve
@@ -64,16 +66,27 @@ def axion_limit_params(PSD, freqs, PSDback_min, PSDback_max, PSDback_bins,
 
     # First we need to compute the PSDback at each test mass signal window
     PSDback_TestSet = np.linspace(PSDback_min, PSDback_max, PSDback_bins)
-    scanned_PSDback = ABRA_TS.PSD_Scan(PSD, freqs, PSDback_TestSet, v0, vObs, 
-                                       num_stacked)
+    scanned_PSDback = ABRA_TS.PSD_Scan(PSD, freqs, PSDback_TestSet, PSDback_temp, 
+                                       v0, vObs, num_stacked)
 
+    
     print "Best fit PSDback:",scanned_PSDback
+    PSDback_temp *= scanned_PSDback
+
+    # Find maximum PSDback in each mass window
+    PSDmax_Array = np.zeros(len(mass_TestSet))
+    for im in range(len(mass_TestSet)):
+        fmin = mass_TestSet[im] / 2.0 / np.pi
+        fmax = fmin*(1+3*(v0 + vObs)**2 / c**2)
+        fminIndex = np.searchsorted(freqs, fmin)+1
+        fmaxIndex = np.min(np.array([np.searchsorted(freqs, fmax), len(freqs) - 1]))
+        PSDmax_Array[im] = np.max(PSDback_temp[fminIndex:fmaxIndex])
 
     # Now that we have the PSDback at each test mass signal window, we can compute
     # the detection and exclusion lines. These are for A ~ gagg**2
 
     sigmaA = getSigma_A(mass_TestSet, num_stacked, collectionTime, v0, vObs, 
-                        scanned_PSDback)
+                        PSDmax_Array)
     exclusionA = zScore(0)*sigmaA
     exclusionA_1SigUp = zScore(1) * sigmaA
     exclusionA_1SigLo = zScore(-1) * sigmaA
@@ -82,8 +95,7 @@ def axion_limit_params(PSD, freqs, PSDback_min, PSDback_max, PSDback_bins,
     # Determine the TS threshold for detection and the A associated 
     TS_Thresh = 2.*scipy.special.erfinv(1.-2.*(1.-detectionP)/num_Masses)**2.
     detectionA = solveForA(mass_TestSet, TS_Thresh, num_stacked, collectionTime, 
-                           v0, vObs, scanned_PSDback)
-
+                           v0, vObs, PSDmax_Array)
 
     # We are using the CLs method, so we do not go below 1 sigma lower
     A_Min = np.amin(exclusionA_1SigLo)*0.01
@@ -100,7 +112,7 @@ def axion_limit_params(PSD, freqs, PSDback_min, PSDback_max, PSDback_bins,
     
     # Now calculate the TS array
     TS_Array_raw = ABRA_TS.TS_Scan(PSD, freqs, mass_TestSet, A_TestSet, 
-                                   scanned_PSDback, v0, vObs, num_stacked, 
+                                   PSDback_temp, v0, vObs, num_stacked, 
                                    min_Resolve)
 
     # At each mass value subtract off the maximum TS, so the maximum value is 0

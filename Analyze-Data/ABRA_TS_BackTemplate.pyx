@@ -1,8 +1,9 @@
 ###############################################################################
-# ABRA_TS.pyx
+# ABRA_TS_BackTemplate.pyx
 ###############################################################################
 #
 # Evaluate the Test Statistic for ABRACADABRA at a series of input values
+# This version assumes we have a template for the background
 #
 ###############################################################################
 
@@ -21,7 +22,8 @@ cdef double c = 299792.458 # speed of light [km/s]
 @cython.cdivision(True)
 @cython.initializedcheck(False)
 cpdef PSD_Scan(double[::1] PSD, double[::1] freqs, double[::1] PSDback_TestSet,
-               double v0_Halo, double vObs_Halo, double num_stacked):
+               double[::1] PSDback, double v0_Halo, double vObs_Halo, 
+               double num_stacked):
 
     # Setup the length of input and output arrays
     cdef int N_freqs = len(freqs)
@@ -38,7 +40,7 @@ cpdef PSD_Scan(double[::1] PSD, double[::1] freqs, double[::1] PSDback_TestSet,
         LL_iPSDb = 0.
         for ifrq in range(N_freqs):
             LambdaK = Lambdak(freqs[ifrq], 1.0,
-                              0.0, PSDback_TestSet[iPSDb],
+                              0.0, PSDback_TestSet[iPSDb]*PSDback[ifrq],
                               v0_Halo, vObs_Halo)
             # Calculate LL appropriate for stacked data
             LL_iPSDb += (-PSD[ifrq]/LambdaK - log(LambdaK)) * num_stacked
@@ -59,8 +61,8 @@ cpdef PSD_Scan(double[::1] PSD, double[::1] freqs, double[::1] PSDback_TestSet,
 @cython.cdivision(True)
 @cython.initializedcheck(False)
 cpdef TS_Scan(double[::1] PSD, double[::1] freqs, double[::1] mass_TestSet,
-              double[::1] A_TestSet, double PSDback, double v0, double vObs, 
-              double num_stacked, int min_Resolve):
+              double[::1] A_TestSet, double[::1] PSDback, double v0, 
+              double vObs, double num_stacked, int min_Resolve):
 
     # Setup the length of input and output arrays
     cdef int N_freqs = len(freqs)
@@ -77,25 +79,25 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs, double[::1] mass_TestSet,
     # Loop through masses and A values and calculate the TS for each
     for im in range(N_masses):
         # Only look at a range of frequencies around the mass
-            fmin = mass_TestSet[im] / 2.0 / pi
-            fmax = fmin*(1+3*(v0 + vObs)**2 / c**2)
-            fminIndex = np.searchsorted(freqs, fmin)+1
-            fmaxIndex = int_min(np.searchsorted(freqs, fmax), N_freqs - 1)
+        fmin = mass_TestSet[im] / 2.0 / pi
+        fmax = fmin*(1+3*(v0 + vObs)**2 / c**2)
+        fminIndex = np.searchsorted(freqs, fmin)+1
+        fmaxIndex = int_min(np.searchsorted(freqs, fmax), N_freqs - 1)
 
-            # Skip if below the minimum resolved relative frequency size
-            for iA in range(N_A):
-                for ifrq in range(fminIndex, fmaxIndex):
-                    # Lambda_k associated with Signal + Background
-                    LambdakA = Lambdak(freqs[ifrq], mass_TestSet[im],
-                                       A_TestSet[iA], PSDback, v0, vObs)
-                    # Lambda_k associated with Background only
-                    Lambdak0 = Lambdak(freqs[ifrq], mass_TestSet[im],
-                                       0.0, PSDback, v0, vObs)
+        # Skip if below the minimum resolved relative frequency size
+        for iA in range(N_A):
+            for ifrq in range(fminIndex, fmaxIndex):
+                # Lambda_k associated with Signal + Background
+                LambdakA = Lambdak(freqs[ifrq], mass_TestSet[im],
+                                   A_TestSet[iA], PSDback[ifrq], v0, vObs)
+                # Lambda_k associated with Background only
+                Lambdak0 = Lambdak(freqs[ifrq], mass_TestSet[im],
+                                   0.0, PSDback[ifrq], v0, vObs)
 
-                    # Calculate the TS appropriate for stacked data 
-                    TS_Array[im, iA] += 2*(-PSD[ifrq] * (1/LambdakA-1/Lambdak0) 
-                                        - log(LambdakA/Lambdak0)) * num_stacked 
-                    
+                # Calculate the TS appropriate for stacked data 
+                TS_Array[im, iA] += 2*(-PSD[ifrq] * (1/LambdakA-1/Lambdak0) 
+                                    - log(LambdakA/Lambdak0)) * num_stacked 
+                
     return TS_Array
 
 
