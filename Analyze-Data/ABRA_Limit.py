@@ -42,7 +42,7 @@ def axion_limit_params(PSD, freqs, PSDback_min, PSDback_max, PSDback_bins,
 
     # Setup array of masses to scan over given the frequencies
     N_testMass = int(np.log(freqs[-1] / freqs[0])
-                 / np.log(1. + v0**2. / 2. / c**2.) + 1.)
+                 / np.log(1. + v0**2. / 2. / c**2.))
     mass_TestSet = freqs[0]*(1. + v0**2. / 2. / c**2.)**np.arange(N_testMass) \
                    * 2*np.pi
     num_Masses = c**2 / v0**2 * np.log(freqs[-1]/freqs[0])
