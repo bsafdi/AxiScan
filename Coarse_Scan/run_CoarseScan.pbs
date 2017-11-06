@@ -1,0 +1,27 @@
+#!/bin/sh
+#### PBS preamble
+
+#PBS -N Make_Data
+
+#PBS -M fosterjw@umich.edu
+#PBS -m abe
+
+# Change the number of cores (ppn = 1), amount of memory, and walltime:
+
+#PBS -l nodes=1:ppn=1,mem=36gb,walltime=24:00:00
+#PBS -j oe
+#PBS -V
+
+#PBS -A bsafdi_fluxod
+#PBS -q fluxod
+#PBS -l qos=flux
+
+#### End PBS preamble
+
+# Put your job commands here:
+
+echo "Starting job ...."
+cd /nfs/turbo/bsafdi/fosterjw/github/ABRAnalysis/CompleteMultiNest/Coarse_Scan
+python PyCoarseScan.py
+
+
