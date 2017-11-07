@@ -1,6 +1,4 @@
 import sys, os
-sys.path.append('/nfs/turbo/bsafdi/fosterjw/github/ABRA-DATA/MultiNestScan/cython/')
-
 import matplotlib as mpl
 mpl.use('Agg')
 import pymultinest

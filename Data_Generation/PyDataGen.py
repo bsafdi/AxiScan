@@ -1,6 +1,5 @@
 import sys, os
 import numpy as np
-sys.path.append('./cython/')
 import dataGen_GF as dataGen
 
 

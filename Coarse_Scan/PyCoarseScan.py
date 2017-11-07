@@ -2,8 +2,6 @@ import numpy as np
 import scipy
 import scipy.stats
 import sys, os
-
-sys.path.append('./cython/')
 import coarseScanner as scanner
 
 ##################################

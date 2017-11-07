@@ -2,19 +2,16 @@
 
 # Script to compile cython code
 
-cd Data_Generation/cython/
+cd Data_Generation/
 ./make.sh
-cd ..
 cd ..
 
-cd Coarse_Scan/cython/
+cd Coarse_Scan/
 ./make.sh
-cd ..
 cd ..
 
-cd MultiNestScan/cython/
+cd MultiNestScan/
 ./make.sh
-cd ..
 cd ..
 
 
