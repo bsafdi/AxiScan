@@ -6,16 +6,6 @@ import sys, os
 sys.path.append('./cython/')
 import coarseScanner as scanner
 
-c = 299792.458
-
-###################################
-###   Set the Scan Parameters   ###
-###################################
-
-PSDback = 163539.36 #100.0
-v0 = 220.0
-vObs = 232.0
-
 ##################################
 ###   Load the Existing Data   ###
 ##################################
@@ -33,6 +23,14 @@ for fileName in fileList:
 PSD = np.load(data_dir + PSDFile)
 N_stacked = float(PSDFile[11:PSDFile.index('.')])
 
+###################################
+###   Set the Scan Parameters   ###
+###################################
+
+c = 299792.458 # km/s
+PSDback = 163539.36 #eV^{-1}
+v0 = 220 # km/s
+vObs = 232 # km/s
 
 ###########################
 ###   Methods We Need   ###
@@ -141,16 +139,16 @@ TS_Array = np.zeros(TS_Array_raw.shape)
 for i in range(len(mass_TestSet)):
     TS_Array[i] = TS_Array_raw[i] - np.amax(TS_Array_raw[i])
 
+# Extract limits on A at each mass from the TS results
 A_Limits = []
 for i in range(len(mass_TestSet)):
     A_Limit = A_TestSet[find_nearest_index(TS_Array[i], -1.645)]
     A_Limits.append(A_Limit)
 
-
 A_Limits = np.array(A_Limits)
 
-locations = np.where(A_Limits > detectionA)
 
 np.save(data_dir + 'A_Limits.npy', A_Limits)
 np.save(data_dir + 'Sigma_A.npy', sigmaA)
 np.save(data_dir + 'Mass_TestSet.npy', mass_TestSet)
+np.save(data_dir + 'Detection_Threshold.npy', detectionA)

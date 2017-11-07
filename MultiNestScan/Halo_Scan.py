@@ -1,6 +1,5 @@
 import sys, os
-sys.path.append('./cython/')
-
+sys.path.append('/nfs/turbo/bsafdi/fosterjw/github/ABRA-DATA/MultiNestScan/cython/')
 
 import matplotlib as mpl
 mpl.use('Agg')
@@ -12,7 +11,7 @@ c = 299792.458
 
 data_dir = '/nfs/turbo/bsafdi/fosterjw/github/ABRA-DATA/Data/'
 PSD_dir = '/nfs/turbo/bsafdi/fosterjw/github/ABRA-DATA/Data/PSD_Data/'
-chains_dir = data_dir
+chains_dir = '/nfs/turbo/bsafdi/fosterjw/github/ABRA-DATA/Data/Halo_Only_Chains/'
 
 v0 = 220.0
 vDotMag = 232.36

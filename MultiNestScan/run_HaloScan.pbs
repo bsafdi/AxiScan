@@ -1,7 +1,7 @@
 #!/bin/sh
 #### PBS preamble
 
-#PBS -N Halo_Only_Scan
+#PBS -N Log_Halo_Only_Scan
 
 #PBS -M fosterjw@umich.edu
 #PBS -m abe

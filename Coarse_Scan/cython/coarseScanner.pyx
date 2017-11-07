@@ -38,27 +38,28 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs, double[::1] mass_TestSet,
 
     # Loop through masses and A values and calculate the TS for each
     for im in range(N_masses):
+        print(str(im + 1) + ' of ' + str(N_masses))
+
+
         # Only look at a range of frequencies around the mass
-            fmin = mass_TestSet[im] / 2.0 / pi
-            fmax = fmin*(1+3*(v0 + vObs)**2 / c**2)
-            fminIndex = np.searchsorted(freqs, fmin)+1
-            fmaxIndex = int_min(np.searchsorted(freqs, fmax), N_freqs - 1)
+        fmin = mass_TestSet[im] / 2.0 / pi
+        fmax = fmin*(1+3*(v0 + vObs)**2 / c**2)
+        fminIndex = np.searchsorted(freqs, fmin)+1
+        fmaxIndex = int_min(np.searchsorted(freqs, fmax), N_freqs - 1)
 
-            print(str(im) + ' of ' + str(N_masses))
+        # Skip if below the minimum resolved relative frequency size
+        for iA in range(N_A):
+            for ifrq in range(fminIndex, fmaxIndex):
+                # Lambda_k associated with Signal + Background
+                LambdakA = Lambdak(freqs[ifrq], mass_TestSet[im],
+                                   A_TestSet[iA], PSDback, v0, vObs)
+                # Lambda_k associated with Background only
+                Lambdak0 = Lambdak(freqs[ifrq], mass_TestSet[im],
+                                   0.0, PSDback, v0, vObs)
 
-            # Skip if below the minimum resolved relative frequency size
-            for iA in range(N_A):
-                for ifrq in range(fminIndex, fmaxIndex):
-                    # Lambda_k associated with Signal + Background
-                    LambdakA = Lambdak(freqs[ifrq], mass_TestSet[im],
-                                       A_TestSet[iA], PSDback, v0, vObs)
-                    # Lambda_k associated with Background only
-                    Lambdak0 = Lambdak(freqs[ifrq], mass_TestSet[im],
-                                       0.0, PSDback, v0, vObs)
-
-                    # Calculate the TS appropriate for stacked data 
-                    TS_Array[im, iA] += 2*(-PSD[ifrq] * (1/LambdakA-1/Lambdak0) 
-                                        - log(LambdakA/Lambdak0)) * num_stacked 
+                # Calculate the TS appropriate for stacked data 
+                TS_Array[im, iA] += 2*(-PSD[ifrq] * (1/LambdakA-1/Lambdak0) 
+                                    - log(LambdakA/Lambdak0)) * num_stacked 
                     
     return TS_Array
 

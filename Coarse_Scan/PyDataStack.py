@@ -11,7 +11,6 @@ fileList = os.listdir(PSD_dir)
 
 count = 0
 for fileName in fileList:
-    print(fileName)
     PSD += np.load(PSD_dir + fileName)
     count += 1
     print(count)

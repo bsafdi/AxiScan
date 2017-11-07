@@ -18,7 +18,7 @@ save_tag = 'PSD_Day'
 c = 299792.458
 
 ma = 5.5e5*2*np.pi
-A = 8000.0
+A = 8000.0*26
 PSDback= 163539.36
 
 v0_Halo = 220.0
@@ -38,7 +38,7 @@ fracStream = 0.05
 ##############################
 freqs = np.linspace(.99998, 1.00002, 10000)*5.5e5 
 dayToGen = sys.argv[1]
-includeGF = 0
+includeGF = 0.0
 
 
 #############################
