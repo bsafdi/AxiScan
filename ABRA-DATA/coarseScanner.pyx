@@ -96,14 +96,12 @@ cdef double fSHM(double v, double v0, double vObs) nogil:
     return f
 
 
-
-
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.initializedcheck(False)
-cpdef Lambdak(double freq, double ma, double A, double PSDback,
-                    double v0_Halo, double vObs_Halo):
+cdef double Lambdak(double freq, double ma, double A, double PSDback,
+                    double v0_Halo, double vObs_Halo) nogil:
     """ Calculate the mean of the exponential distribution followed by the PSD
           - freq: frequencies to calculate Lambdak [Hz]
           - ma: ma/2pi is the frequency associated with the axion mass [Hz]

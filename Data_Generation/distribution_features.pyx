@@ -5,94 +5,6 @@ cimport cython
 from cython.parallel import parallel, prange
 import scipy.special as sc
 
-
-
-#################################
-###   Data Generation Class   ###
-#################################
-class Generator:
-
-    def __init__(self, ma, A, PSDback, v0_Halo, vDotMag_Halo, alpha_Halo, tbar_Halo,
-                 v0_Stream, vDotMag_Stream, alpha_Stream, tbar_Stream, fracStream,
-                 freqs, seed = 0):
-        self.ma = ma
-        self.A = A
-        self.PSDback = PSDback
-
-        self.v0_Halo = v0_Halo
-        self.vDotMag_Halo = vDotMag_Halo
-        self.alpha_Halo = alpha_Halo
-        self.tbar_Halo = tbar_Halo
-
-        self.v0_Stream = v0_Stream
-        self.vDotMag_Stream = vDotMag_Stream
-        self.alpha_Stream = alpha_Stream
-        self.tbar_Stream = tbar_Stream
-        self.fracStream = fracStream
-
-        self.freqs = freqs
-        setSeed_Outer(np.random.randint(1e5))
-
-
-    @cython.boundscheck(False)
-    @cython.wraparound(False)
-    @cython.cdivision(True)
-    @cython.initializedcheck(False)
-    def makePSDFast(self, double day, int includeGF):
-        
-        cdef double PSDback = self.PSDback
-        cdef double[::1] freqs = self.freqs
-        cdef int N_freqs = len(self.freqs)
-        cdef double[::1] PSD = np.zeros((N_freqs))
-
-        cdef double omega = 2.0*np.pi/365.0
-
-        cdef double A = self.A
-        cdef double ma = self.ma
-        cdef double v0_Halo = self.v0_Halo
-        cdef double vObs_Halo = sqrt(self.vDotMag_Halo**2 + vEarthMag**2 \
-                                + 2* self.vDotMag_Halo * vEarthMag \
-                                * self.alpha_Halo*cos(omega*(day - self.tbar_Halo)))
-
-        cdef double v0_Stream = self.v0_Stream
-        cdef double vObs_Stream = sqrt(self.vDotMag_Stream**2 + vEarthMag**2 \
-                                  + 2* self.vDotMag_Stream * vEarthMag \
-                                  * self.alpha_Stream*cos(omega*(day - self.tbar_Stream)))
-        cdef double fracStream = self.fracStream
-
-
-        cdef Py_ssize_t i
-        cdef double exp_mean, freq, v, vSq
-
-        cdef double df = freqs[1] - freqs[0]
-
-        for i in range(N_freqs):
-            freq = freqs[i]
-            vSq = 2.0*(2.0*pi*freq-ma)/ma
-            
-            if vSq > 0:
-                v = sqrt(vSq)
-
-                if includeGF == 1:
-                    exp_mean = (1.0-fracStream)*(fHalo(v, v0_Halo/c, vObs_Halo/c)+c*f1(v*c,v0_Halo, day)) \
-                                + fracStream*(fHalo(v, v0_Stream/c, vObs_Stream/c)+c*f1(v*c,v0_Stream, day))
-                    exp_mean = exp_mean * A * pi / ma / v + PSDback
-
-                else:
-                    exp_mean = (1.0-fracStream)*(fHalo(v, v0_Halo/c, vObs_Halo/c)) \
-                                + fracStream*(fHalo(v, v0_Stream/c, vObs_Stream/c))
-                    exp_mean = exp_mean * A * pi / ma / v + PSDback
-
-            else:
-                exp_mean = PSDback
-
-            PSD[i] = next_exp_rand(exp_mean)
-            self.PSDArray = np.array(PSD)
-
-###########################################
-###    Definitions, Necessary Methods   ###
-###########################################
-
 DTYPE = np.float
 ctypedef np.float_t DTYPE_t
 
@@ -104,45 +16,6 @@ cdef extern from "math.h":
     double sin(double x) nogil
     double sqrt(double x) nogil
     double fmax(double x, double y) nogil
-
-
-cdef extern from "gsl/gsl_cdf.h":
-    double gsl_cdf_gaussian_Pinv(double P, double sigma) nogil
-
-from libc.stdlib cimport rand, RAND_MAX
-cdef double RAND_SCALE = 1.0/RAND_MAX
-
-cdef inline double next_rand() nogil:
-    return rand()*RAND_SCALE
-
-def rand_outer():
-    return next_rand()
-
-cdef extern from "gsl/gsl_rng.h":
-    ctypedef struct gsl_rng_type
-    ctypedef struct gsl_rng
-
-    gsl_rng_type *gsl_rng_mt19937
-    gsl_rng *gsl_rng_alloc(gsl_rng_type * T) nogil
-    void gsl_rng_set(gsl_rng *r, int s) nogil
-
-cdef extern from "gsl/gsl_randist.h":
-    double gsl_ran_exponential(gsl_rng *r, double) nogil
-
-cdef gsl_rng *r = gsl_rng_alloc(gsl_rng_mt19937)
-
-cdef inline double next_exp_rand(double mean) nogil:
-    return gsl_ran_exponential(r, mean)
-
-def next_exp_rand_outer(mean):
-    return next_exp_rand(mean)
-
-cdef inline void setSeed(int seed) nogil:
-    gsl_rng_set(r, seed)
-
-def setSeed_Outer(seed):
-    setSeed(seed)
-
 
 ## Physical Constants
 cdef double pi = np.pi
@@ -164,12 +37,16 @@ cdef double lambda_p = np.deg2rad(102.0)
 cdef double a = 1.496e8
 cdef double e = .016722
 
+
+def get_vObs(vDotMag, alpha, tbar, day):
+    return np.sqrt(vDotMag**2 + vEarthMag**2 + 2* vDotMag * vEarthMag * alpha*np.cos(omega*(day - tbar)))
+
 ##Evaluates the velocity distribution for a given velocity, v0, vObs
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.initializedcheck(False)
-cdef double fHalo(double v, double v0, double vObs) nogil:
+cpdef double f_SHM(double v, double v0, double vObs) nogil:
     cdef double norm = 1.0/sqrt(pi)/v0/vObs
     cdef double f = norm*v*exp(-(v-vObs)**2 / v0**2) -norm*v* exp(- (v + vObs)**2 / v0**2)
 
@@ -181,7 +58,9 @@ cdef double fHalo(double v, double v0, double vObs) nogil:
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.initializedcheck(False)
-cdef double f1(double vMag, double v0, double t) nogil:
+cpdef double f_GF(double vMag, double v0, double t) nogil:
+
+    vMag *= c
 
     cdef double g_t = omega * (t-tp)
     cdef double nu = g_t + 2 * e * sin(g_t)*5.0/4.0 * e**2 * sin(2*g_t)
@@ -262,4 +141,4 @@ cdef double f1(double vMag, double v0, double t) nogil:
         cos_theta = cos_theta * ci_theta - sin_theta * si_theta
         sin_theta = sin_theta * ci_theta + old_cos_theta * si_theta
 
-    return integral
+    return integral*c
