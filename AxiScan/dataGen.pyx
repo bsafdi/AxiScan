@@ -128,7 +128,8 @@ class Generator:
                     exp_mean = PSDback
 
                 PSD[i] = exp_mean
-        
-        np.save('../examples/PSD_Day' + str(np.rint(day))+'.npy', PSD)    
+
+    
+        return PSD    
 
 
