@@ -17,4 +17,4 @@ AxiScan is a repository of tools for implementing a likelihood framework for axi
 
 ## Examples
 
-Worked examples can be found [here](https://github.com/bsafdi/AxiScan/tree/master/examples).
+Worked examples can be found [here](https://github.com/bsafdi/AxiScan/tree/master/examples). Before running these, the cython should be installed and then compiled as follows: within the `AxiScan/` folder, execute `make.sh`.
