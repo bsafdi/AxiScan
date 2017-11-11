@@ -8,12 +8,10 @@
 
 # Import basic functions
 import numpy as np
-import numpy.linalg as LA
 cimport numpy as np
 cimport cython
 
 cdef extern from "math.h":
-    double log(double x) nogil
     double exp(double x) nogil
     double cos(double x) nogil
     double sin(double x) nogil
