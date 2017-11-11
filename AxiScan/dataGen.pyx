@@ -45,14 +45,16 @@ cdef extern from "gsl/gsl_rng.h":
 
 cdef extern from "gsl/gsl_randist.h":
     double gsl_ran_exponential(gsl_rng *r, double) nogil
+    double gsl_ran_gamma(gsl_rng *r, double a, double b) nogil
 
 cdef gsl_rng *r = gsl_rng_alloc(gsl_rng_mt19937)
 
 cdef inline double next_exp_rand(double mean) nogil:
     return gsl_ran_exponential(r, mean)
 
-def next_exp_rand_outer(mean):
-    return next_exp_rand(mean)
+
+cdef inline double next_gamma_rand(double a, double b) nogil:
+    return gsl_ran_gamma(r, a, b)
 
 cdef inline void setSeed(int seed) nogil:
     gsl_rng_set(r, seed)
@@ -87,6 +89,8 @@ class Generator:
 
             self.freqs = freqs
             self.threads = threads
+
+            self.num_stacked = 86400.0 * (freqs[1] - freqs[0])
             setSeed_Outer(np.random.randint(1e5))
 
     @cython.boundscheck(False)
@@ -94,6 +98,8 @@ class Generator:
     @cython.cdivision(True)
     @cython.initializedcheck(False)
     def makePSDFast(self, double day):
+
+        cdef double num_stacked = self.num_stacked
 
         cdef double[::1] freqs = self.freqs
         cdef int N_freqs = len(self.freqs)
@@ -127,7 +133,7 @@ class Generator:
                 else:
                     exp_mean = PSDback
 
-                PSD[i] = exp_mean
+                PSD[i] = next_gamma_rand(num_stacked, exp_mean) / num_stacked
 
     
         return PSD    

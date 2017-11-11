@@ -40,8 +40,12 @@ cdef int getIndex(double[::1] freqs, double target) nogil:
 
         else:
             end = trial
-  
-    return end
+
+    if end == freqs.shape[0]:
+        return end -1
+
+    else:
+        return end
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
