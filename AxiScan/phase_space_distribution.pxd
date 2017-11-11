@@ -1,18 +1,12 @@
 ###############################################################################
-# phase_space_distribution.pyx
+# phase_space_distribution.pxd
 ###############################################################################
 #
-# Class to handle details of the axion velocity distribution
+# Here we predefine all functions in phase_space_distribution.pyx so that they 
+# are compiled simultaneously - this way the code optimizes all functions at 
+# once and allows functions to be called as pure C
 #
 ###############################################################################
-
-# Import basic functions
-import numpy as np
-import numpy.linalg as LA
-cimport numpy as np
-cimport cython
-from cython.parallel import parallel, prange
-import scipy.special as sc
 
 ## Compute a given day's boost velocity
 cdef double get_vObs(double vDotMag, double alpha, double tbar, double day) nogil
