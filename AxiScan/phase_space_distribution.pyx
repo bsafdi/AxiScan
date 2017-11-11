@@ -1,23 +1,37 @@
+###############################################################################
+# phase_space_distribution.pyx
+###############################################################################
+#
+# Class to handle details of the axion velocity distribution
+#
+###############################################################################
+
+# Import basic functions
 import numpy as np
 import numpy.linalg as LA
 cimport numpy as np
 cimport cython
 from cython.parallel import parallel, prange
 import scipy.special as sc
-from cython_gsl cimport gsl_sf_dawson
 
-## Physical Constants
+cdef extern from "math.h":
+    double log(double x) nogil
+    double exp(double x) nogil
+    double pow(double x, double y) nogil
+    double cos(double x) nogil
+    double sin(double x) nogil
+    double sqrt(double x) nogil
+    double fmax(double x, double y) nogil
+
+# Physical Constants
 cdef double pi = np.pi
 cdef double c = 299792.458
 cdef double G = 6.674e-20 #km^3 / (kg * s)^2
 cdef double Msun = 1.989e30
 
-## Solar System Parameters
+# Solar System Parameters
 cdef double[:] e1 = np.array([.994, .1095, .003116])
-cdef double[:] e2 = np.array([-.05174, .4945, -.8677])
-cdef double vSun_x = 11.0
-cdef double vSun_y = 232.0
-cdef double vSun_z = 7.0
+cdef double[:] e2 = np.array([-.05174, .4945, -.8677]) 
 cdef double vEarthMag = 29.79 # Earth's speed km/s
 cdef double omega = 2. * np.pi / 365. # angular velocity rad/s
 cdef double tp = -74.88 # days
@@ -26,7 +40,16 @@ cdef double lambda_p = np.deg2rad(102.0)
 cdef double a = 1.496e8
 cdef double e = .016722
 
-##Evaluates the velocity distribution for a given velocity, v0, vObs
+
+#########################################################
+# External functions									#
+#########################################################
+
+## Compute a given day's boost velocity
+cdef double get_vObs(double vDotMag, double alpha, double tbar, double day) nogil:
+    return sqrt(vDotMag**2 + vEarthMag**2 + 2 * vDotMag * vEarthMag * alpha*cos(omega*(day-tbar)))
+
+## Evaluates the SHM velocity distribution for a given velocity, v0, vObs
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
@@ -34,21 +57,19 @@ cdef double e = .016722
 cdef double f_SHM(double v, double v0, double vObs) nogil:
     cdef double norm = 1.0/sqrt(pi)/v0/vObs
     cdef double f = norm*v*exp(-(v-vObs)**2 / v0**2) -norm*v* exp(- (v + vObs)**2 / v0**2)
-
     return f
 
-##Evaluates the perturbation to the velocity distribution
+## Evaluates the perturbation to the velocity distribution due to gravitational focusing
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.initializedcheck(False)
-cdef double f_GF(double vMag, double v0, double t) nogil:
+cdef double f_GF(double vMag, double v0, double vSun_x, double vSun_y, double vSun_z, double t) nogil:
 
     cdef double g_t = omega * (t-tp)
     cdef double nu = g_t + 2 * e * sin(g_t)*5.0/4.0 * e**2 * sin(2*g_t)
     cdef double r_t = a * (1-e**2) / (1 + e * cos(nu))
     cdef double lambda_t = lambda_p + nu
-
 
     cdef double earth_pos_x = r_t * (-sin(lambda_t) * e1[0] + cos(lambda_t) * e2[0])
     cdef double earth_pos_y = r_t * (-sin(lambda_t) * e1[1] + cos(lambda_t) * e2[1])
@@ -103,15 +124,14 @@ cdef double f_GF(double vMag, double v0, double t) nogil:
             temp_unit_y = (vy + vEarth_y) / temp_norm
             temp_unit_z = (vz + vEarth_z) / temp_norm
 
-            temp = - prefactor * sin_theta * vMag**2 * dTheta * dPhi
+            temp = - prefactor * sin_theta * vMag**2 * dTheta * dPhi			
             temp *= exp(-((vx + vEarth_x + vSun_x)**2 + (vy + vEarth_y + vSun_y)**2 + (vz + vEarth_z + vSun_z)**2) / v0**2)
             temp /= temp_norm
-
 
             temp *= ((vx + vEarth_x + vSun_x)*(earth_pos_unit_x - temp_unit_x) \
                     + (vy + vEarth_y + vSun_y)*(earth_pos_unit_y - temp_unit_y) \
                     + (vz + vEarth_z + vSun_z)*(earth_pos_unit_z - temp_unit_z))
-
+            
             temp /= (1 - (earth_pos_unit_x * temp_unit_x + earth_pos_unit_y * temp_unit_y + earth_pos_unit_z * temp_unit_z))
 
             integral += temp
@@ -125,49 +145,3 @@ cdef double f_GF(double vMag, double v0, double t) nogil:
         sin_theta = sin_theta * ci_theta + old_cos_theta * si_theta
 
     return integral
-
-
-################################
-###   Additional Functions   ###
-################################
-
-DTYPE = np.float
-ctypedef np.float_t DTYPE_t
-
-cdef extern from "math.h":
-    double log(double x) nogil
-    double exp(double x) nogil
-    double pow(double x, double y) nogil
-    double cos(double x) nogil
-    double sin(double x) nogil
-    double sqrt(double x) nogil
-    double fmax(double x, double y) nogil
-
-
-cdef extern from "gsl/gsl_cdf.h":
-    double gsl_cdf_gaussian_Pinv(double P, double sigma) nogil
-
-from libc.stdlib cimport rand, RAND_MAX
-cdef double RAND_SCALE = 1.0/RAND_MAX
-
-cdef inline double next_rand() nogil:
-    return rand()*RAND_SCALE
-
-cdef extern from "gsl/gsl_rng.h":
-    ctypedef struct gsl_rng_type
-    ctypedef struct gsl_rng
-
-    gsl_rng_type *gsl_rng_mt19937
-    gsl_rng *gsl_rng_alloc(gsl_rng_type * T) nogil
-    void gsl_rng_set(gsl_rng *r, int s) nogil
-
-cdef extern from "gsl/gsl_randist.h":
-    double gsl_ran_exponential(gsl_rng *r, double) nogil
-
-cdef gsl_rng *r = gsl_rng_alloc(gsl_rng_mt19937)
-
-cdef inline double next_exp_rand(double mean) nogil:
-    return gsl_ran_exponential(r, mean)
-
-cdef inline void setSeed(int seed) nogil:
-    gsl_rng_set(r, seed)
