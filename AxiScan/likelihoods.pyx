@@ -20,7 +20,7 @@ cdef extern from "math.h":
     double sqrt(double x) nogil
 
 # Useful constants
-cdef double pi = 3.1415927
+cdef double pi = np.pi 
 cdef double c = 299792.458 # speed of light [km/s]
 
 @cython.boundscheck(False)
@@ -47,8 +47,9 @@ cdef int getIndex(double[::1] freqs, double target) nogil:
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.initializedcheck(False)
-cdef double stacked_likelihood(double[::1] freqs, double[::1] PSD, double mass, double A, double v0,
-                    double vObs, double PSDback, double num_stacked) nogil:
+cdef double stacked_ll(double[::1] freqs, double[::1] PSD, double mass,
+                       double A, double v0, double vObs, double PSDback,
+                       double num_stacked) nogil:
 
     # Set up length of input data and output variable
     cdef int N_freqs = freqs.shape[0]
@@ -76,9 +77,10 @@ cdef double stacked_likelihood(double[::1] freqs, double[::1] PSD, double mass, 
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.initializedcheck(False)
-cdef double SHM_AnnualMod_Likelihood(double[::1] freqs, double[:, ::1] PSD, double mass, double A,
-                                     double v0, double vDotMag, double alpha, double tbar,
-                                     double PSDback, double num_stacked) nogil:
+cdef double SHM_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD, double mass,
+                             double A, double v0, double vDotMag, double alpha,
+                             double tbar, double PSDback,
+                             double num_stacked) nogil:
 
     # Set up length of input data and output variable
     cdef int N_freqs = freqs.shape[0]
@@ -110,10 +112,12 @@ cdef double SHM_AnnualMod_Likelihood(double[::1] freqs, double[:, ::1] PSD, doub
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.initializedcheck(False)
-cdef double Substructure_AnnualMod_Likelihood(double[::1] freqs, double[:, ::1] PSD, double mass, double A,
-                                              double v0_Halo, double vDotMag_Halo, double alpha_Halo, double tbar_Halo,
-                                              double v0_Sub, double vDotMag_Sub, double alpha_Sub, double tbar_Sub,
-                                              double frac_Sub, double PSDback, double num_stacked) nogil:
+cdef double Sub_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD, double mass,
+                             double A, double v0_Halo, double vDotMag_Halo,
+                             double alpha_Halo, double tbar_Halo, double v0_Sub,
+                             double vDotMag_Sub, double alpha_Sub,
+                             double tbar_Sub, double frac_Sub, double PSDback,
+                             double num_stacked) nogil:
 
     # Set up length of input data and output variable
     cdef int N_freqs = freqs.shape[0]

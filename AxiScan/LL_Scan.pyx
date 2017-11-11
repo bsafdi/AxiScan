@@ -13,10 +13,6 @@ cimport numpy as np
 cimport cython
 cimport likelihoods as LL
 
-# Useful constants
-cdef double pi = np.pi
-cdef double c = 299792.458 # speed of light [km/s]
-
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)

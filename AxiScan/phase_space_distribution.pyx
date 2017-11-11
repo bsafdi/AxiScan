@@ -2,15 +2,17 @@
 # phase_space_distribution.pyx
 ###############################################################################
 #
-# Class to handle details of the axion velocity distribution
+# Functions associated with the axion speed distribution
 #
 ###############################################################################
+
 
 # Import basic functions
 import numpy as np
 cimport numpy as np
 cimport cython
 
+# C functions
 cdef extern from "math.h":
     double exp(double x) nogil
     double cos(double x) nogil
@@ -19,20 +21,22 @@ cdef extern from "math.h":
 
 # Physical Constants
 cdef double pi = np.pi
-cdef double c = 299792.458
-cdef double G = 6.674e-20 #km^3 / (kg * s)^2
-cdef double Msun = 1.989e30
+cdef double c = 299792.458 # speed of light [km/s]
+cdef double G = 6.674e-20 # gravitation Constant [km^3/kg/s^2]
 
 # Solar System Parameters
+cdef double Msun = 1.989e30 # [kg]
+# two vectors below define the plane of the Earth's orbit
+# see e.g. fig. 4 of 1307.5323 
 cdef double[:] e1 = np.array([.994, .1095, .003116])
 cdef double[:] e2 = np.array([-.05174, .4945, -.8677]) 
-cdef double vEarthMag = 29.79 # Earth's speed km/s
-cdef double omega = 2. * np.pi / 365. # angular velocity rad/s
-cdef double tp = -74.88 # days
-cdef double t1 = 0.0 # days
-cdef double lambda_p = np.deg2rad(102.0)
-cdef double a = 1.496e8
-cdef double e = .016722
+cdef double vEarthMag = 29.79 # Earth's speed [km/s]
+cdef double omega = 2.*pi/365. # period of Earth's revolution [rad/day]
+cdef double tp = -74.88 # time of the perihelion [day] 
+cdef double t1 = 0.0 # vernal equinox, taking to be our origin [day]
+cdef double lambda_p = 102.*pi/180. # ecliptic longitude of the perihelion
+cdef double a = 1.496e8 # semimajor axis of Earth's orbit [km]
+cdef double e = .016722 # eccentricity of Earth's orbit
 
 
 #########################################################
