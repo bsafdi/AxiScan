@@ -5,7 +5,7 @@
 [![arXiv](https://img.shields.io/badge/arXiv-1711.0xxxx%20-green.svg)](https://arxiv.org/abs/1711.0xxxx)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-![Sensitivity](https://github.com/bsafdi/AxiScan/blob/master/Projected_Sensitivity.pdf "Projected sensitivity versus S/N=1")
+![Sensitivity](https://github.com/bsafdi/AxiScan/blob/master/Projected_Sensitivity.png "Projected sensitivity versus S/N=1")
 
 ## AUTHORS
 
