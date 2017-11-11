@@ -11,17 +11,13 @@ import numpy as np
 import numpy.linalg as LA
 cimport numpy as np
 cimport cython
-from cython.parallel import parallel, prange
-import scipy.special as sc
 
 cdef extern from "math.h":
     double log(double x) nogil
     double exp(double x) nogil
-    double pow(double x, double y) nogil
     double cos(double x) nogil
     double sin(double x) nogil
     double sqrt(double x) nogil
-    double fmax(double x, double y) nogil
 
 # Physical Constants
 cdef double pi = np.pi
