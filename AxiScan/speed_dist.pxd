@@ -1,5 +1,5 @@
 ###############################################################################
-# phase_space_distribution.pxd
+# speed_dist.pxd
 ###############################################################################
 #
 # Here we predefine all functions in phase_space_distribution.pyx so that they 

@@ -1,8 +1,8 @@
 ###############################################################################
-# likelihoods.pxd
+# axion_ll.pxd
 ###############################################################################
 #
-# Here we predefine all functions in likelihoods.pyx so that they are compiled 
+# Here we predefine all functions in axion_ll.pyx so that they are compiled 
 # simultaneously - this way the code optimizes all functions at once and allows 
 # functions to be called as pure C
 #
