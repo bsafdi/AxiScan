@@ -9,6 +9,10 @@ build
 chains
 .coverage
 
+# compilation
+*dist*
+*egg*
+
 # Cython output
 *.pyc
 *.so
