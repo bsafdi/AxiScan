@@ -16,7 +16,7 @@ extensions = [
 
 setup_args = {'name':'AxiScan',
     'version':'0.0',
-    'description':'A Python package for DM subhalo searches using stellar wakes',
+    'description':'A Likelihood Framework for Axion Direct Detection',
     'url':'https://github.com/bsafdi/AxiScan',
     'author':'Benjamin R. Safdi',
     'author_email':'bsafdi@umich.edu',
