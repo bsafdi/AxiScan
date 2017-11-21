@@ -26,7 +26,7 @@ $ python setup.py install
 The setup script also compile the cython. To manually compile the cython locally, execute the following 
 
 ```
-make build
+$ make build
 ```
 
 ## Examples
