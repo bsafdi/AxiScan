@@ -7,34 +7,23 @@
 ###############################################################################
 
 
+# Import basic functions
 import numpy as np
 cimport numpy as np
 cimport cython
 cimport speed_dist as sd
 
-# Import basic functions
+# Physical Constants
+cdef double pi = np.pi
+cdef double c = 299792.458 # speed of light [km/s]
+
+# C math functions
 cdef extern from "math.h":
-    double log(double x) nogil
-    double exp(double x) nogil
-    double pow(double x, double y) nogil
-    double cos(double x) nogil
-    double sin(double x) nogil
     double sqrt(double x) nogil
-    double fmax(double x, double y) nogil
 
 
-cdef extern from "gsl/gsl_cdf.h":
-    double gsl_cdf_gaussian_Pinv(double P, double sigma) nogil
-
-from libc.stdlib cimport rand, RAND_MAX
-cdef double RAND_SCALE = 1.0/RAND_MAX
-
-cdef inline double next_rand() nogil:
-    return rand()*RAND_SCALE
-
-def rand_outer():
-    return next_rand()
-
+# Load C random draw from a gamma distributions function
+# Also setup ability to set the random number generation seed
 cdef extern from "gsl/gsl_rng.h":
     ctypedef struct gsl_rng_type
     ctypedef struct gsl_rng
@@ -44,14 +33,9 @@ cdef extern from "gsl/gsl_rng.h":
     void gsl_rng_set(gsl_rng *r, int s) nogil
 
 cdef extern from "gsl/gsl_randist.h":
-    double gsl_ran_exponential(gsl_rng *r, double) nogil
     double gsl_ran_gamma(gsl_rng *r, double a, double b) nogil
 
 cdef gsl_rng *r = gsl_rng_alloc(gsl_rng_mt19937)
-
-cdef inline double next_exp_rand(double mean) nogil:
-    return gsl_ran_exponential(r, mean)
-
 
 cdef inline double next_gamma_rand(double a, double b) nogil:
     return gsl_ran_gamma(r, a, b)
@@ -62,78 +46,97 @@ cdef inline void setSeed(int seed) nogil:
 def setSeed_Outer(seed):
     setSeed(seed)
 
-cdef double pi = np.pi
-cdef double c = 299798.452
-
-
 
 class Generator:
+    def __init__(self, mass, A, lambdaB, v0_Halo, vDotMag_Halo, alpha_Halo, 
+                 tbar_Halo, v0_Sub, vDotMag_Sub, alpha_Sub, 
+                 tbar_Sub, frac_Sub, freqs):
+        """ Class to generate fake PSD data
 
-    def __init__(self, ma, A, PSDback, v0_Halo, vDotMag_Halo, alpha_Halo, tbar_Halo,
-                 v0_Stream, vDotMag_Stream, alpha_Stream, tbar_Stream, fracStream,
-                 freqs, threads = 1,seed = 0):
-            self.ma = ma
-            self.A = A
-            self.PSDback = PSDback
+        :param mass: axion mass [angular frequency Hz]
+        :param A: signal strength parameters [Wb^2]
+        :param lambdaB: mean background noise [Wb^2/Hz]
+        Following 4 parameters defined for the Halo (_Halo) 
+        and substructure (_Sub)
+        :param v0: velocity dispersion of SHM [km/s]
+        :param vDotMag: velocity of the sun w.r.t. the galactic frame [km/s]
+        :param alpha/tbar: scalar quantities defining direction of vDot
+        :param frac_Sub: fraction of local DM in the substructure
+        :param lambdaB: mean background noise [Wb^2/Hz]
+        """
 
-            self.v0_Halo = v0_Halo
-            self.vDotMag_Halo = vDotMag_Halo
-            self.alpha_Halo = alpha_Halo
-            self.tbar_Halo = tbar_Halo
+        self.mass = mass
+        self.A = A
+        self.lambdaB = lambdaB
 
-            self.v0_Stream = v0_Stream
-            self.vDotMag_Stream = vDotMag_Stream
-            self.alpha_Stream = alpha_Stream
-            self.tbar_Stream = tbar_Stream
-            self.fracStream = fracStream
+        self.v0_Halo = v0_Halo
+        self.vDotMag_Halo = vDotMag_Halo
+        self.alpha_Halo = alpha_Halo
+        self.tbar_Halo = tbar_Halo
 
-            self.freqs = freqs
-            self.threads = threads
+        self.v0_Sub = v0_Sub
+        self.vDotMag_Sub = vDotMag_Sub
+        self.alpha_Sub = alpha_Sub
+        self.tbar_Sub = tbar_Sub
+        self.frac_Sub = frac_Sub
 
-            self.num_stacked = 86400.0 * (freqs[1] - freqs[0])
-            setSeed_Outer(np.random.randint(1e5))
+        self.freqs = freqs
+
+        # 86400 = number of seconds in a day
+        self.num_stacked = 86400. * (freqs[1] - freqs[0])
+        # Set the seed to a random number each time the class is initiated
+        setSeed_Outer(np.random.randint(1e5))
 
     @cython.boundscheck(False)
     @cython.wraparound(False)
     @cython.cdivision(True)
     @cython.initializedcheck(False)
-    def makePSDFast(self, double day):
+    def makePSD(self, double day):
+        """ Make the fake PSD data
+        :param day: day with respect to t1, vernal equinox
+
+        :returns: array of power spectral density values in [Wb^2/Hz]
+        """
 
         cdef double num_stacked = self.num_stacked
 
         cdef double[::1] freqs = self.freqs
         cdef int N_freqs = len(self.freqs)
-        cdef double[::1] PSD = np.zeros((N_freqs))
+        cdef double[::1] PSD = np.zeros(N_freqs)
 
         cdef double A = self.A
-        cdef double ma = self.ma
+        cdef double mass = self.mass
         cdef double v0_Halo = self.v0_Halo
-        cdef double vObs_Halo = sd.get_vObs(self.vDotMag_Halo, self.alpha_Halo, self.tbar_Halo, day)
-        cdef double v0_Stream = self.v0_Stream
-        cdef double vObs_Stream = sd.get_vObs(self.vDotMag_Stream, self.alpha_Stream, self.tbar_Stream, day)
-        cdef double fracStream = self.fracStream
-
-        cdef double PSDback = self.PSDback
+        cdef double vObs_Halo = sd.get_vObs(self.vDotMag_Halo, self.alpha_Halo, 
+                                            self.tbar_Halo, day)
+        cdef double v0_Sub = self.v0_Sub
+        cdef double vObs_Sub = sd.get_vObs(self.vDotMag_Sub, 
+                                              self.alpha_Sub, 
+                                              self.tbar_Sub, day)
+        cdef double frac_Sub = self.frac_Sub
+        cdef double lambdaB = self.lambdaB
+        
         cdef Py_ssize_t i
         cdef double exp_mean, freq, v, vSq
-
         cdef double df = freqs[1] - freqs[0]
 
+        # Calculate the expected mean and then perform a random draw around it
         with nogil:
             for i in range(N_freqs):
                 freq = freqs[i]
-                vSq = 2.0*(2.0*pi*freq-ma)/ma
+                vSq = 2.*(2.*pi*freq-mass)/mass
 
                 if vSq > 0:
                     v = sqrt(vSq)
-                    exp_mean = A*pi*(1.0-fracStream)*(sd.f_SHM(v, v0_Halo/c, vObs_Halo/c)) / ma / v \
-                               + A*pi*fracStream*(sd.f_SHM(v, v0_Stream/c, vObs_Stream/c)) / ma / v \
-                               + PSDback
+                    exp_mean = A*pi*(1.-frac_Sub)*(sd.f_SHM(v, v0_Halo/c, 
+                               vObs_Halo/c)) / mass / v \
+                               + A*pi*frac_Sub*(sd.f_SHM(v, v0_Sub/c, 
+                               vObs_Sub/c)) / mass / v \
+                               + lambdaB
 
                 else:
-                    exp_mean = PSDback
+                    exp_mean = lambdaB
 
                 PSD[i] = next_gamma_rand(num_stacked, exp_mean) / num_stacked
-
-    
+ 
         return PSD
