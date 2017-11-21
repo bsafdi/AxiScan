@@ -31,4 +31,4 @@ $ make build
 
 ## Examples
 
-Worked examples can be found [here](https://github.com/bsafdi/AxiScan/tree/master/examples). Before running these, the cython should be installed and then compiled as follows: within the `AxiScan/` folder, execute `make.sh`.
+Worked examples can be found [here](https://github.com/bsafdi/AxiScan/tree/master/examples). Before running these, the code must be installed following the instructions above.
