@@ -12,7 +12,7 @@ import numpy as np
 cimport numpy as np
 cimport cython
 
-# C functions
+# C math functions
 cdef extern from "math.h":
     double pow(double x, double y) nogil
     double exp(double x) nogil

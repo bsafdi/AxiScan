@@ -2,10 +2,11 @@
 # axion_ll.pyx
 ###############################################################################
 #
-# Class to calculate the log-likelihood of an observed
-# data set given model parameters
+# Class to calculate the log-likelihood of an observed data set given model 
+# parameters
 #
 ###############################################################################
+
 
 # Import basic functions
 import numpy as np
@@ -13,39 +14,20 @@ cimport numpy as np
 cimport cython
 cimport speed_dist as sd
 
-
 # C math functions
 cdef extern from "math.h":
+    double pow(double x, double y) nogil
     double log(double x) nogil
     double sqrt(double x) nogil
 
-# Useful constants
+# Physical Constants
 cdef double pi = np.pi 
 cdef double c = 299792.458 # speed of light [km/s]
 
-@cython.boundscheck(False)
-@cython.wraparound(False)
-@cython.cdivision(True)
-@cython.initializedcheck(False)
-cdef int getIndex(double[::1] freqs, double target) nogil:
-    cdef int start = 0
-    cdef int end = freqs.shape[0]
-    cdef int trial
 
-    while end-start > 1:
-        trial = (end-start) / 2 + start
-
-        if target > freqs[trial]:
-            start = trial
-
-        else:
-            end = trial
-
-    if end == freqs.shape[0]:
-        return end -1
-
-    else:
-        return end
+######################
+# External functions #
+######################
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -61,8 +43,10 @@ cdef double stacked_ll(double[::1] freqs, double[::1] PSD, double mass,
 
     # Set up loop variables
     cdef double v, lambdaK
-    cdef double fmin = mass / 2.0 / pi
-    cdef double fmax = fmin * (1.0 * 3.0 * (vObs**2 + v0**2)/c**2)
+    # Scan from the frequency of mass up to some value well above the peak
+    # of the velocity distribution
+    cdef double fmin = mass / 2. / pi
+    cdef double fmax = fmin * (3.*(pow(vObs,2.) + pow(v0,2.))/pow(c,2.))
 
     cdef int fmin_Index = getIndex(freqs, fmin)
     cdef int fmax_Index = getIndex(freqs, fmax)
@@ -152,3 +136,29 @@ cdef double Sub_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD, double mass,
 
 
     return ll * num_stacked
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.initializedcheck(False)
+cdef int getIndex(double[::1] freqs, double target) nogil:
+    """ Sort through an ordered array of frequencies (freqs) to find the
+        nearest value to a specefic f (target)
+    """
+
+    cdef int start = 0
+    cdef int end = freqs.shape[0]
+    cdef int trial
+
+    while end-start > 1:
+        trial = (end-start) / 2 + start
+        if target > freqs[trial]:
+            start = trial
+        else:
+            end = trial
+
+    if end == freqs.shape[0]:
+        return end -1
+    else:
+        return end
