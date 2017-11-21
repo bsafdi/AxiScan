@@ -10,7 +10,7 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-cimport phase_space_distribution as psd
+cimport speed_dist as sd
 
 # Import basic functions
 cdef extern from "math.h":
@@ -108,9 +108,9 @@ class Generator:
         cdef double A = self.A
         cdef double ma = self.ma
         cdef double v0_Halo = self.v0_Halo
-        cdef double vObs_Halo = psd.get_vObs(self.vDotMag_Halo, self.alpha_Halo, self.tbar_Halo, day)
+        cdef double vObs_Halo = sd.get_vObs(self.vDotMag_Halo, self.alpha_Halo, self.tbar_Halo, day)
         cdef double v0_Stream = self.v0_Stream
-        cdef double vObs_Stream = psd.get_vObs(self.vDotMag_Stream, self.alpha_Stream, self.tbar_Stream, day)
+        cdef double vObs_Stream = sd.get_vObs(self.vDotMag_Stream, self.alpha_Stream, self.tbar_Stream, day)
         cdef double fracStream = self.fracStream
 
         cdef double PSDback = self.PSDback
@@ -126,8 +126,8 @@ class Generator:
 
                 if vSq > 0:
                     v = sqrt(vSq)
-                    exp_mean = A*pi*(1.0-fracStream)*(psd.f_SHM(v, v0_Halo/c, vObs_Halo/c)) / ma / v \
-                               + A*pi*fracStream*(psd.f_SHM(v, v0_Stream/c, vObs_Stream/c)) / ma / v \
+                    exp_mean = A*pi*(1.0-fracStream)*(sd.f_SHM(v, v0_Halo/c, vObs_Halo/c)) / ma / v \
+                               + A*pi*fracStream*(sd.f_SHM(v, v0_Stream/c, vObs_Stream/c)) / ma / v \
                                + PSDback
 
                 else:

@@ -11,7 +11,7 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-cimport phase_space_distribution
+cimport speed_dist as sd
 
 
 # C math functions
@@ -71,7 +71,7 @@ cdef double stacked_ll(double[::1] freqs, double[::1] PSD, double mass,
 
     for ifrq in range(fmin_Index, fmax_Index):
         v = sqrt(2.0*(2.0*pi*freqs[ifrq]-mass)/ mass)        
-        lambdaK = A * pi * phase_space_distribution.f_SHM(v, v0, vObs) / mass / v + PSDback
+        lambdaK = A * pi * sd.f_SHM(v, v0, vObs) / mass / v + PSDback
 
         ll += -PSD[ifrq] / lambdaK - log(lambdaK)
 
@@ -102,11 +102,11 @@ cdef double SHM_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD, double mass,
     cdef Py_ssize_t ifrq, iDay
 
     for iDay in range(N_days):
-        vObs = phase_space_distribution.get_vObs(vDotMag, alpha, tbar, iDay)
+        vObs = sd.get_vObs(vDotMag, alpha, tbar, iDay)
        
         for ifrq in range(fmin_Index, fmax_Index):
             v = sqrt(2.0*(2.0*pi*freqs[ifrq]-mass)/ mass)    
-            lambdaK  = A * pi * phase_space_distribution.f_SHM(v, v0, vObs) / mass / v + PSDback
+            lambdaK  = A * pi * sd.f_SHM(v, v0, vObs) / mass / v + PSDback
 
             ll += -PSD[iDay, ifrq] / lambdaK - log(lambdaK)
 
@@ -139,17 +139,16 @@ cdef double Sub_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD, double mass,
     cdef Py_ssize_t ifrq, iDay
 
     for iDay in range(N_days):
-        vObs_Halo = phase_space_distribution.get_vObs(vDotMag_Halo, alpha_Halo, tbar_Halo, iDay)
-        vObs_Sub = phase_space_distribution.get_vObs(vDotMag_Sub, alpha_Sub, tbar_Sub, iDay)
+        vObs_Halo = sd.get_vObs(vDotMag_Halo, alpha_Halo, tbar_Halo, iDay)
+        vObs_Sub = sd.get_vObs(vDotMag_Sub, alpha_Sub, tbar_Sub, iDay)
        
         for ifrq in range(fmin_Index, fmax_Index):
             v = sqrt(2.0*(2.0*pi*freqs[ifrq]-mass)/ mass)    
-            lambdaK = (1-frac_Sub)*A * pi * phase_space_distribution.f_SHM(v, v0_Halo, vObs_Halo) / mass / v 
-            lambdaK += frac_Sub*A * pi * phase_space_distribution.f_SHM(v, v0_Sub, vObs_Sub) / mass / v
+            lambdaK = (1-frac_Sub)*A * pi * sd.f_SHM(v, v0_Halo, vObs_Halo) / mass / v 
+            lambdaK += frac_Sub*A * pi * sd.f_SHM(v, v0_Sub, vObs_Sub) / mass / v
             lambdaK += PSDback
 
             ll += -PSD[iDay, ifrq] / lambdaK - log(lambdaK)
 
 
     return ll * num_stacked
-

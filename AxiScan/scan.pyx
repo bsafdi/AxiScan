@@ -11,7 +11,7 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-cimport likelihoods as LL
+cimport axion_ll as ll
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -32,10 +32,10 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs, double[::1] mass_TestSet,
     for iM in range(N_masses):
         for iA in range(N_AVals):
    
-            TS_Array[iM, iA] += LL.stacked_likelihood(freqs, PSD, mass_TestSet[iM],  A_TestSet[iA],
+            TS_Array[iM, iA] += ll.stacked_ll(freqs, PSD, mass_TestSet[iM],  A_TestSet[iA],
                                                      v0, vObs, PSDback, num_stacked)
 
-            TS_Array[iM, iA] -= LL.stacked_likelihood(freqs, PSD, mass_TestSet[iM],  0,
+            TS_Array[iM, iA] -= ll.stacked_ll(freqs, PSD, mass_TestSet[iM],  0,
                                                      v0, vObs, PSDback, num_stacked)
 
             TS_Array[iM, iA] *= 2
@@ -52,7 +52,7 @@ cpdef double SHM_AnnualMod_Likelihood(double[::1] freqs, double[:, ::1] PSD, dou
                                      double v0, double vDotMag, double alpha, double tbar,
                                      double PSDback, double num_stacked) nogil:
 
-    return LL.SHM_AnnualMod_Likelihood(freqs, PSD, mass, A, v0, vDotMag, alpha, tbar, PSDback, num_stacked)
+    return ll.SHM_AnnualMod_ll(freqs, PSD, mass, A, v0, vDotMag, alpha, tbar, PSDback, num_stacked)
 
 
 
@@ -66,6 +66,6 @@ cpdef double Substructure_AnnualMod_Likelihood(double[::1] freqs, double[:, ::1]
                                               double frac_Sub, double PSDback, double num_stacked) nogil:
 
 
-    return LL.Substructure_AnnualMod_Likelihood(freqs, PSD, mass, A, v0_Halo, vDotMag_Halo, alpha_Halo, tbar_Halo,
+    return ll.Sub_AnnualMod_ll(freqs, PSD, mass, A, v0_Halo, vDotMag_Halo, alpha_Halo, tbar_Halo,
                                                 v0_Sub, vDotMag_Sub, alpha_Sub, tbar_Sub, frac_Sub, PSDback, num_stacked) 
 
