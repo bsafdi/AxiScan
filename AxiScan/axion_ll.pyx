@@ -59,7 +59,7 @@ cdef double stacked_ll(double[::1] freqs, double[::1] PSD, double mass,
     # Scan from the frequency of mass up to some value well above the peak
     # of the velocity distribution
     cdef double fmin = mass / 2. / pi
-    cdef double fmax = fmin * (3.*(pow(vObs,2.) + pow(v0,2.))/pow(c,2.))
+    cdef double fmax = fmin * (1+3*(vObs + v0)**2 / c**2)
 
     cdef int fmin_Index = getIndex(freqs, fmin)
     cdef int fmax_Index = getIndex(freqs, fmax)
@@ -67,7 +67,7 @@ cdef double stacked_ll(double[::1] freqs, double[::1] PSD, double mass,
     cdef Py_ssize_t ifrq
     for ifrq in range(fmin_Index, fmax_Index):
         v = sqrt(2. * (2.*pi*freqs[ifrq]-mass) / mass) 
-        lambdaK = A * pi * sd.f_SHM(v, v0, vObs) / mass / v + lambdaB
+        lambdaK = A * pi * c*sd.f_SHM(v*c, v0, vObs) / mass / v + lambdaB
 
         ll += -PSD[ifrq] / lambdaK - log(lambdaK)
 
@@ -108,7 +108,7 @@ cdef double SHM_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD, double mass,
     # Scan from the frequency of mass up to some value well above the peak
     # of the velocity distribution
     cdef double fmin = mass / 2. / pi
-    cdef double fmax = fmin * (3.*(pow(vDotMag,2.) + pow(v0,2.))/pow(c,2.))
+    cdef double fmax = fmin * (1+3*(vDotMag + v0)**2 / c**2)
 
     cdef int fmin_Index = getIndex(freqs, fmin)
     cdef int fmax_Index = getIndex(freqs, fmax)
@@ -120,7 +120,7 @@ cdef double SHM_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD, double mass,
        
         for ifrq in range(fmin_Index, fmax_Index):
             v = sqrt(2. * (2.*pi*freqs[ifrq]-mass) / mass)    
-            lambdaK  = A * pi * sd.f_SHM(v, v0, vObs) / mass / v + lambdaB
+            lambdaK  = A * pi*c * sd.f_SHM(v*c, v0, vObs) / mass / v + lambdaB
 
             ll += -PSD[iDay, ifrq] / lambdaK - log(lambdaK)
 
@@ -165,8 +165,7 @@ cdef double Sub_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD, double mass,
     # Scan from the frequency of mass up to some value well above the peak
     # of the velocity distribution
     cdef double fmin = mass / 2. / pi
-    cdef double fmax = fmin * (3.*(pow(vDotMag_Halo,2.) 
-                              + pow(v0_Halo,2.))/pow(c,2.))
+    cdef double fmax = fmin * (1+3*(vDotMag_Halo + v0_Halo)**2 / c**2)
 
     cdef int fmin_Index = getIndex(freqs, fmin)
     cdef int fmax_Index = getIndex(freqs, fmax)
@@ -179,8 +178,8 @@ cdef double Sub_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD, double mass,
        
         for ifrq in range(fmin_Index, fmax_Index):
             v = sqrt(2.0*(2.0*pi*freqs[ifrq]-mass)/ mass)    
-            lambdaK = (1-frac_Sub)*A * pi * sd.f_SHM(v, v0_Halo, vObs_Halo) / mass / v 
-            lambdaK += frac_Sub*A * pi * sd.f_SHM(v, v0_Sub, vObs_Sub) / mass / v
+            lambdaK = (1-frac_Sub) * A * pi * c * sd.f_SHM(c*v, v0_Halo, vObs_Halo) / mass / v 
+            lambdaK += frac_Sub * A * pi * c *  sd.f_SHM(c*v, v0_Sub, vObs_Sub) / mass / v
             lambdaK += lambdaB
 
             ll += -PSD[iDay, ifrq] / lambdaK - log(lambdaK)
@@ -196,19 +195,15 @@ cdef int getIndex(double[::1] freqs, double target) nogil:
     """ Sort through an ordered array of frequencies (freqs) to find the
         nearest value to a specefic f (target)
     """
+    cdef int N_freqs = freqs.shape[0]
+    cdef Py_ssize_t i
 
-    cdef int start = 0
-    cdef int end = freqs.shape[0]
-    cdef int trial
+    if freqs[0] > target:
+        return 0
 
-    while end-start > 1:
-        trial = (end-start) / 2 + start
-        if target > freqs[trial]:
-            start = trial
-        else:
-            end = trial
+    for i in range(N_freqs-1):
+        if freqs[i] <= target and freqs[i+1] > target:
+            return i+1
 
-    if end == freqs.shape[0]:
-        return end -1
-    else:
-        return end
+
+    return N_freqs-1
