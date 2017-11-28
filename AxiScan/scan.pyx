@@ -11,7 +11,7 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-cimport axion_ll as ll
+from . cimport axion_ll as ll
 
 
 @cython.boundscheck(False)

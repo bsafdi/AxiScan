@@ -12,7 +12,7 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-cimport speed_dist as sd
+from . cimport speed_dist as sd
 
 # C math functions
 cdef extern from "math.h":
