@@ -68,12 +68,14 @@ cdef double get_vObs(double vDotMag, double alpha, double tbar,
 @cython.initializedcheck(False)
 cdef double f_SHM(double v, double v0, double vObs) nogil:
     """ Standard Halo Model (SHM) at a given speed
+        All velocities should be input in the same units. The units of f_SHM
+        are then the inverse of the velocity
     
-    :param v: speed to evaluate SHM at [km/s]
-    :param v0: velocity dispersion of SHM [km/s]
-    :param vObs: lab/observer/Earth speed w.r.t. the galactic frame [km/s]
+    :param v: speed to evaluate SHM at
+    :param v0: velocity dispersion of SHM 
+    :param vObs: lab/observer/Earth speed w.r.t. the galactic frame 
 
-    :returns: f_SHM(v|v0,vObs) [s/km]
+    :returns: f_SHM(v|v0,vObs) 
     """
     
     cdef double norm = 1./sqrt(pi)/v0/vObs
