@@ -11,7 +11,9 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-from . cimport axion_ll as ll
+from .axion_ll cimport stacked_ll as s_ll
+from .axion_ll cimport SHM_AnnualMod_ll as SHM_ll
+from .axion_ll cimport Sub_AnnualMod_ll as Sub_ll
 
 
 @cython.boundscheck(False)
@@ -46,13 +48,12 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs, double[::1] mass_TestSet,
     for iM in range(N_masses):
         for iA in range(N_AVals):
    
-            Theta_Array[iM, iA] += ll.stacked_ll(freqs, PSD, mass_TestSet[iM],  
-                                                 A_TestSet[iA], v0, vObs, 
-                                                 lambdaB, num_stacked)
+            Theta_Array[iM, iA] += s_ll(freqs, PSD, mass_TestSet[iM], 
+                                        A_TestSet[iA], v0, vObs, lambdaB, 
+                                        num_stacked)
 
-            Theta_Array[iM, iA] -= ll.stacked_ll(freqs, PSD, mass_TestSet[iM], 
-                                                 0, v0, vObs, lambdaB, 
-                                                 num_stacked)
+            Theta_Array[iM, iA] -= s_ll(freqs, PSD, mass_TestSet[iM], 0, v0, 
+                                        vObs, lambdaB, num_stacked)
 
             Theta_Array[iM, iA] *= 2. # Theta is 2x the ll
 
@@ -82,8 +83,9 @@ cpdef double SHM_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD,
     :returns: log likelihood (ll)
     """
 
-    return ll.SHM_AnnualMod_ll(freqs, PSD, mass, A, v0, vDotMag, alpha, tbar, 
-                               lambdaB, num_stacked)
+    return SHM_ll(freqs, PSD, mass, A, v0, vDotMag, alpha, tbar, lambdaB, 
+                  num_stacked)
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
@@ -113,7 +115,6 @@ cpdef double Sub_AnnualMod_ll(double[::1] freqs, double[:, ::1] PSD,
     :returns: log likelihood (ll)
     """
 
-    return ll.Sub_AnnualMod_ll(freqs, PSD, mass, A, v0_Halo, vDotMag_Halo, 
-                               alpha_Halo, tbar_Halo, v0_Sub, vDotMag_Sub, 
-                               alpha_Sub, tbar_Sub, frac_Sub, lambdaB, 
-                               num_stacked)
+    return Sub_ll(freqs, PSD, mass, A, v0_Halo, vDotMag_Halo, alpha_Halo, 
+                  tbar_Halo, v0_Sub, vDotMag_Sub, alpha_Sub, tbar_Sub, frac_Sub, 
+                  lambdaB, num_stacked)

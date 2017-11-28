@@ -11,7 +11,8 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-from . cimport speed_dist as sd
+from .speed_dist cimport get_vObs
+from .speed_dist cimport f_SHM
 
 # Physical Constants
 cdef double pi = np.pi
@@ -107,12 +108,11 @@ class Generator:
         cdef double A = self.A
         cdef double mass = self.mass
         cdef double v0_Halo = self.v0_Halo
-        cdef double vObs_Halo = sd.get_vObs(self.vDotMag_Halo, self.alpha_Halo, 
-                                            self.tbar_Halo, day)
+        cdef double vObs_Halo = get_vObs(self.vDotMag_Halo, self.alpha_Halo, 
+                                         self.tbar_Halo, day)
         cdef double v0_Sub = self.v0_Sub
-        cdef double vObs_Sub = sd.get_vObs(self.vDotMag_Sub, 
-                                              self.alpha_Sub, 
-                                              self.tbar_Sub, day)
+        cdef double vObs_Sub = get_vObs(self.vDotMag_Sub, self.alpha_Sub, 
+                                        self.tbar_Sub, day)
         cdef double frac_Sub = self.frac_Sub
         cdef double lambdaB = self.lambdaB
         
@@ -128,9 +128,9 @@ class Generator:
 
                 if vSq > 0:
                     v = sqrt(vSq)
-                    exp_mean = A*pi*(1.-frac_Sub)*(sd.f_SHM(v, v0_Halo/c, 
+                    exp_mean = A*pi*(1.-frac_Sub)*(f_SHM(v, v0_Halo/c, 
                                vObs_Halo/c)) / mass / v \
-                               + A*pi*frac_Sub*(sd.f_SHM(v, v0_Sub/c, 
+                               + A*pi*frac_Sub*(f_SHM(v, v0_Sub/c, 
                                vObs_Sub/c)) / mass / v \
                                + lambdaB
 
