@@ -20,13 +20,13 @@ AxiScan is a repository of tools for implementing a likelihood framework for axi
 AxiScan is written in a combination of `python` and `cython`. To install the codebase along with all its dependencies, use the setup script
 
 ```
-$ python setup.py install
+python setup.py install
 ```
 
 The setup script also compile the cython. To manually compile the cython locally, execute the following 
 
 ```
-$ make build
+make build
 ```
 
 ## Examples
