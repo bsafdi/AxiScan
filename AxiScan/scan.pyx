@@ -11,9 +11,10 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-from .axion_ll cimport stacked_ll as s_ll
-from .axion_ll cimport SHM_AnnualMod_ll as SHM_ll
-from .axion_ll cimport Sub_AnnualMod_ll as Sub_ll
+from axion_ll cimport stacked_ll as s_ll
+from axion_ll cimport SHM_AnnualMod_ll as SHM_ll
+from axion_ll cimport Sub_AnnualMod_ll as Sub_ll
+
 
 
 @cython.boundscheck(False)
@@ -54,6 +55,54 @@ cpdef TS_Scan(double[::1] PSD, double[::1] freqs, double[::1] mass_TestSet,
 
             Theta_Array[iM, iA] -= s_ll(freqs, PSD, mass_TestSet[iM], 0, v0, 
                                         vObs, lambdaB, num_stacked)
+
+            Theta_Array[iM, iA] *= 2. # Theta is 2x the ll
+
+    return Theta_Array
+
+
+@cython.boundscheck(False)
+@cython.wraparound(False)
+@cython.cdivision(True)
+@cython.initializedcheck(False)
+cpdef TS_Scan_Background(double[::1] PSD, double[::1] freqs,
+                         double[::1] mass_TestSet, double[::1] A_TestSet,
+                         double[::1] lambdaB_TestSet, double v0, double vObs,
+                         double num_stacked):
+    """ Evalute  the Test Statistic (TS), or more accurately Theta, for a given
+        dataset and set of model parameters. From this can determine TS of
+        discovery or TS for 95% limits. In this method, we profile over the
+        background, returning the median value of the background on the 
+        relevant interval for each mass. 
+
+    :param PSD: power spectral density data at those frequencies [Wb^2/Hz]
+    :param freqs: frequencies scanned over [Hz]
+    :param mass_TestSet: array of masses to evaluate Theta at
+    :param A_TestSet: array of signal strength values to evaluate Theta at
+    :param lambdaB_TestSet: array of background values at each mass
+    :param v0: velocity dispersion of SHM [km/s]
+    :param vObs: lab/observer/Earth speed w.r.t. the galactic frame [km/s]
+    :param num_stacked: number of stackings
+
+    :returns: Theta
+    """
+
+    cdef int N_masses = len(mass_TestSet)
+    cdef int N_AVals = len(A_TestSet)
+    cdef double[:, ::1] Theta_Array = np.zeros((N_masses, N_AVals))
+    cdef Py_ssize_t iM, iA
+
+    # Evaluate Theta for every mass and A value
+    for iM in range(N_masses):
+        for iA in range(N_AVals):
+   
+            Theta_Array[iM, iA] += s_ll(freqs, PSD, mass_TestSet[iM], 
+                                            A_TestSet[iA], v0, vObs,
+                                            lambdaB_TestSet[iM], num_stacked)
+
+            Theta_Array[iM, iA] -= s_ll(freqs, PSD, mass_TestSet[iM],
+                                            0, v0, vObs, lambdaB_TestSet[iM],
+                                            num_stacked)
 
             Theta_Array[iM, iA] *= 2. # Theta is 2x the ll
 

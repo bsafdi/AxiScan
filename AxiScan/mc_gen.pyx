@@ -11,8 +11,8 @@
 import numpy as np
 cimport numpy as np
 cimport cython
-from .speed_dist cimport get_vObs
-from .speed_dist cimport f_SHM
+from speed_dist cimport get_vObs
+from speed_dist cimport f_SHM
 
 # Physical Constants
 cdef double pi = np.pi
