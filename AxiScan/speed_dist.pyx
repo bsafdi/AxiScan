@@ -61,12 +61,15 @@ cdef double get_vObs(double vDotMag, double alpha, double tbar,
     return sqrt(pow(vDotMag,2.) + pow(vEarthMag,2.) + 2.*vDotMag*vEarthMag 
                 *alpha*cos(omega*(day-tbar)))
 
+def pyF_SHM(v, v0, vObs):
+    return f_SHM(v, v0, vObs)
+
 
 @cython.boundscheck(False)
 @cython.wraparound(False)
 @cython.cdivision(True)
 @cython.initializedcheck(False)
-cdef double f_SHM(double v, double v0, double vObs) nogil:
+cdef double  f_SHM(double v, double v0, double vObs) nogil:
     """ Standard Halo Model (SHM) at a given speed
         All velocities should be input in the same units. The units of f_SHM
         are then the inverse of the velocity
