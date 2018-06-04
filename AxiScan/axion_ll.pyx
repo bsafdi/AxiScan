@@ -56,19 +56,27 @@ cdef double stacked_ll(double[::1] freqs, double[::1] PSD, double mass,
     cdef double ll = 0.0
 
     # Set up loop variables
-    cdef double v, lambdaK
+    cdef double vSq, v, lambdaK
     # Scan from the frequency of mass up to some value well above the peak
     # of the velocity distribution
     cdef double fmin = mass / 2. / pi
-    cdef double fmax = fmin * (1+3*(vObs + v0)**2 / c**2)
+    cdef double fmax = fmin * (1+2*(vObs + v0)**2 / c**2)
+    fmin *= (1-(vObs + v0)**2 / c**2)
 
     cdef int fmin_Index = getIndex(freqs, fmin)
     cdef int fmax_Index = getIndex(freqs, fmax)
 
     cdef Py_ssize_t ifrq
     for ifrq in range(fmin_Index, fmax_Index):
-        v = sqrt(2. * (2.*pi*freqs[ifrq]-mass) / mass) 
-        lambdaK = A * pi * f_SHM(v, v0/c, vObs/c) / mass / v + lambdaB
+        vSq = 2. * (2.*pi*freqs[ifrq]-mass) / mass
+       
+        if vSq > 0:
+            v = sqrt(vSq)
+ 
+            lambdaK = A * pi * f_SHM(v, v0/c, vObs/c) / mass / v + lambdaB
+
+        else:
+            lambdaK = lambdaB
 
         ll += -PSD[ifrq] / lambdaK - log(lambdaK)
 
