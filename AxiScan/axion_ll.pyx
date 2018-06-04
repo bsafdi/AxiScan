@@ -78,6 +78,9 @@ cdef double stacked_ll(double[::1] freqs, double[::1] PSD, double mass,
         else:
             lambdaK = lambdaB
 
+        if lambdaK <= 0:
+            lambdaK = 1e-5
+
         ll += -PSD[ifrq] / lambdaK - log(lambdaK)
 
     return ll * num_stacked
